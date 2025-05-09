@@ -280,38 +280,92 @@ onMounted(() => {
 });
 
 // 下载图片
-const downloadImage = () => {
+const downloadImage = async () => {
   if (currentImage.value && currentImage.value.url) {
     try {
-      // 创建一个隐形的a标签用于下载
-      const a = document.createElement('a');
-      a.href = currentImage.value.url;
+      // 显示下载开始提示
+      const loadingToastId = toastStore.info(`正在准备下载 "${currentImage.value.name}"...`, { duration: 0 });
+
+      // 使用fetch获取图片内容，转换为blob
+      const response = await fetch(currentImage.value.url);
+      if (!response.ok) {
+        throw new Error(`下载失败: ${response.status} ${response.statusText}`);
+      }
+
+      // 获取blob格式的图片数据
+      const blob = await response.blob();
+
+      // 尝试从Content-Type中获取正确的扩展名
+      let fileExtension = '.jpg'; // 默认扩展名
+      const contentType = response.headers.get('content-type');
+      if (contentType) {
+        const mimeType = contentType.split(';')[0].trim();
+        switch (mimeType) {
+          case 'image/jpeg':
+            fileExtension = '.jpg';
+            break;
+          case 'image/png':
+            fileExtension = '.png';
+            break;
+          case 'image/gif':
+            fileExtension = '.gif';
+            break;
+          case 'image/webp':
+            fileExtension = '.webp';
+            break;
+          case 'image/svg+xml':
+            fileExtension = '.svg';
+            break;
+          case 'image/avif':
+            fileExtension = '.avif';
+            break;
+          case 'image/bmp':
+            fileExtension = '.bmp';
+            break;
+          // 其他类型可以继续添加
+        }
+      }
 
       // 设置文件名，使用原图片名称或使用默认名称
-      let filename = currentImage.value.name || `kiri-image-${Date.now()}.jpg`;
+      let filename = currentImage.value.name || `kiri-image-${Date.now()}`;
 
       // 确保文件名有扩展名
       if (!filename.includes('.')) {
         // 从URL尝试获取扩展名
-        const urlExtension = currentImage.value.url.split('.').pop().split('?')[0];
-        if (urlExtension && urlExtension.length <= 4) {
-          filename += `.${urlExtension}`;
-        } else {
-          filename += '.jpg'; // 默认扩展名
+        const urlExtension = currentImage.value.url.split('.').pop().split(/[?#]/)[0];
+        if (urlExtension && urlExtension.length <= 4 && /^[a-zA-Z0-9]+$/.test(urlExtension)) {
+          fileExtension = `.${urlExtension.toLowerCase()}`;
         }
+        filename += fileExtension;
       }
 
+      // 创建Blob URL
+      const blobUrl = URL.createObjectURL(blob);
+
+      // 创建一个隐形的a标签用于下载
+      const a = document.createElement('a');
+      a.href = blobUrl;
       a.download = filename;
       a.style.display = 'none';
       document.body.appendChild(a);
+
+      // 关闭加载提示
+      toastStore.removeToast(loadingToastId);
+
+      // 执行下载并清理
       a.click();
       document.body.removeChild(a);
+
+      // 延迟释放Blob URL，确保下载已开始
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+      }, 1000);
 
       // 显示下载成功提示
       toastStore.success(`图片 "${filename}" 开始下载`);
     } catch (error) {
       console.error('下载图片失败', error);
-      toastStore.error('下载图片失败，请重试');
+      toastStore.error(`下载图片失败: ${error.message}`);
     }
   } else {
     toastStore.error('无法下载图片，图片地址无效');

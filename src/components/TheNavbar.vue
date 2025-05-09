@@ -6,7 +6,7 @@
       </a>
     </div>
 
-    <nav class="flex flex-col p-4">
+    <nav class="flex flex-col p-4 h-[calc(100%-4rem)] justify-between">
       <div class="space-y-2">
         <router-link to="/" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors" :class="{ 'text-primary': $route.name === 'gallery', 'text-muted-foreground hover:text-primary hover:bg-accent': $route.name !== 'gallery' }">
           <PhotoIcon class="h-5 w-5" />
@@ -23,6 +23,21 @@
           <ShareIcon class="h-5 w-5" />
           共享
         </a>
+      </div>
+
+      <!-- 底部用户信息和退出按钮 -->
+      <div class="mt-auto border-t pt-2">
+        <div class="flex items-center justify-between px-3 py-2">
+          <div class="flex items-center gap-2">
+            <div class="h-8 w-8 rounded-full bg-muted overflow-hidden flex items-center justify-center">
+              <UserIcon class="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div class="text-sm font-medium">用户</div>
+          </div>
+          <button @click="logout" class="flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive" title="退出登录">
+            <ArrowRightOnRectangleIcon class="h-5 w-5" />
+          </button>
+        </div>
       </div>
     </nav>
   </aside>
@@ -41,13 +56,30 @@ import {
   PhotoIcon,
   HeartIcon,
   ShareIcon,
-  Bars3Icon
+  Bars3Icon,
+  UserIcon,
+  ArrowRightOnRectangleIcon
 } from '@heroicons/vue/24/outline';
 import { computed } from 'vue';
 import { useGalleryStore } from '../stores/galleryStore';
 import { useRoute } from 'vue-router';
+import { useToastStore } from '../stores/toastStore';
 
 const route = useRoute();
 const galleryStore = useGalleryStore();
+const toastStore = useToastStore();
 const favoriteCount = computed(() => galleryStore.favoriteCount);
+
+// 退出登录
+const logout = async () => {
+  const confirmed = await toastStore.confirm('确定要退出登录吗？', {
+    title: '退出确认'
+  });
+
+  if (confirmed) {
+    // 这里可以添加实际的登出逻辑
+    toastStore.success('已成功退出登录');
+    // 可能需要重定向到登录页面或执行其他登出后操作
+  }
+};
 </script> 

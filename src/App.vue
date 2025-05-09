@@ -24,9 +24,9 @@ const openThemeCustomizer = () => {
       </div>
     </main>
 
-    <!-- 主题设置按钮 - 左下角 -->
-    <button ref="themeButtonRef" class="fixed bottom-6 left-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90" @click="openThemeCustomizer" title="主题设置">
-      <Cog6ToothIcon class="h-6 w-6" />
+    <!-- 主题设置按钮 - 左侧导航栏底部但在用户头像上方 -->
+    <button ref="themeButtonRef" class="fixed bottom-20 left-6 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90" @click="openThemeCustomizer" title="主题设置">
+      <Cog6ToothIcon class="h-5 w-5" />
     </button>
 
     <!-- 主题自定义器 -->
