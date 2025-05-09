@@ -19,10 +19,10 @@
             {{ favoriteCount }}
           </span>
         </router-link>
-        <a href="#" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-primary">
-          <ShareIcon class="h-5 w-5" />
-          共享
-        </a>
+        <router-link to="/upload" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors" :class="{ 'text-primary': $route.name === 'upload', 'text-muted-foreground hover:text-primary hover:bg-accent': $route.name !== 'upload' }">
+          <ArrowUpTrayIcon class="h-5 w-5" />
+          上传
+        </router-link>
       </div>
 
       <!-- 底部用户信息和退出按钮 -->
@@ -58,7 +58,8 @@ import {
   ShareIcon,
   Bars3Icon,
   UserIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  ArrowUpTrayIcon
 } from '@heroicons/vue/24/outline';
 import { computed } from 'vue';
 import { useGalleryStore } from '../stores/galleryStore';

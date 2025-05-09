@@ -6,16 +6,16 @@
     <!-- Toast消息 -->
     <div class="toast-container relative w-80 rounded-lg p-4 shadow-lg transition-all pointer-events-auto mt-4 mr-4" :class="[typeClasses, { 'toast-exit': isClosing }]" @mouseenter="pauseTimer" @mouseleave="resumeTimer">
       <!-- 消息内容 -->
-      <div class="flex">
+      <div class="flex items-start">
         <!-- 图标 -->
         <div v-if="icon" class="mr-3 flex-shrink-0">
           <component :is="icon" class="h-6 w-6" />
         </div>
 
         <!-- 文本内容 -->
-        <div class="flex-1">
-          <h3 v-if="toast.title" class="font-medium mb-1">{{ toast.title }}</h3>
-          <p class="text-sm">{{ toast.message }}</p>
+        <div class="flex-1 mr-6 overflow-hidden">
+          <h3 v-if="toast.title" class="font-medium mb-1 pr-2 truncate">{{ toast.title }}</h3>
+          <p class="text-sm break-words">{{ toast.message }}</p>
 
           <!-- 确认/取消按钮 (用于模态对话框) -->
           <div v-if="toast.isModal" class="mt-4 flex justify-end gap-2">
@@ -29,7 +29,7 @@
         </div>
 
         <!-- 关闭按钮 (非模态) -->
-        <button v-if="!toast.isModal" @click="close" class="absolute right-2 top-2 rounded-md p-1 text-muted-foreground/70 hover:text-foreground">
+        <button v-if="!toast.isModal" @click="close" class="flex-shrink-0 rounded-md p-1 text-muted-foreground/70 hover:text-foreground">
           <XMarkIcon class="h-4 w-4" />
         </button>
       </div>

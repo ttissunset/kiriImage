@@ -1,6 +1,7 @@
 import GalleryView from '../views/GalleryView.vue'
 import FavoriteView from '../views/FavoriteView.vue'
 import ImagePreview from '../components/ImagePreview.vue'
+import UploadView from '../views/UploadView.vue'
 
 const routes = [
   {
@@ -18,6 +19,11 @@ const routes = [
     name: 'preview',
     component: ImagePreview,
     props: true
+  },
+  {
+    path: '/upload',
+    name: 'upload',
+    component: UploadView
   }
 ]
 
