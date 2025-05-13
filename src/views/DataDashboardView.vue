@@ -117,21 +117,21 @@
             </h2>
             <div class="grid grid-cols-3 gap-3">
               <div class="bg-background p-2 rounded-md border border-border/60">
-                <h3 class="text-xs text-muted-foreground mb-1">已用存储</h3>
+                <h3 class="text-xs text-muted-foreground mb-1">存储桶名称</h3>
                 <p class="text-lg font-bold">
-                  {{ formatStorage(stats.r2UsedStorage) }}
+                  {{ stats.bucketName }}
                 </p>
               </div>
               <div class="bg-background p-2 rounded-md border border-border/60">
-                <h3 class="text-xs text-muted-foreground mb-1">请求次数</h3>
+                <h3 class="text-xs text-muted-foreground mb-1">文件数量</h3>
                 <p class="text-lg font-bold">
                   {{ stats.r2Requests.toLocaleString() }}
                 </p>
               </div>
               <div class="bg-background p-2 rounded-md border border-border/60">
-                <h3 class="text-xs text-muted-foreground mb-1">带宽使用</h3>
+                <h3 class="text-xs text-muted-foreground mb-1">已用存储</h3>
                 <p class="text-lg font-bold">
-                  {{ formatStorage(stats.r2Bandwidth) }}
+                  {{ formatStorage(stats.r2UsedStorage) }}
                 </p>
               </div>
             </div>
@@ -464,18 +464,23 @@ import VueApexCharts from "vue3-apexcharts";
 import { ArrowPathIcon } from "@heroicons/vue/24/outline";
 import Button from "../components/ui/Button.vue";
 import { throttle } from "../utils/performance";
-import { getSystemInfo, getLoginRecords, getAllUsers } from "../api/stats";
+import {
+  getSystemInfo,
+  getLoginRecords,
+  getAllUsers,
+  getR2StorageStats,
+} from "../api/stats";
 
 const authStore = useAuthStore();
 const router = useRouter();
 const loading = ref(true);
 const partialLoading = ref(false); // 局部加载状态
 
-// ================ 模拟数据 ================
+// ================ 初始数据 ================
 const stats = ref({
-  r2UsedStorage: 15.6 * 1024 * 1024 * 1024,
-  r2Requests: 158642,
-  r2Bandwidth: 156.8 * 1024 * 1024 * 1024,
+  r2UsedStorage: 0,
+  r2Requests: 0,
+  bucketName: "",
 });
 
 // 上传统计数据
@@ -889,6 +894,25 @@ const formatStorage = (bytes) => {
   else return (bytes / (1024 * 1024 * 1024)).toFixed(2) + " GB";
 };
 
+// 加载R2存储统计信息
+const fetchR2StorageStats = async () => {
+  try {
+    const response = await getR2StorageStats();
+    if (response.code === 200) {
+      // 更新R2存储统计数据
+      stats.value.r2UsedStorage = response.data.totalStorage.bytes;
+      stats.value.r2Requests = response.data.totalFiles; 
+      stats.value.bucketName = response.data.bucketName; 
+
+      console.log("R2存储统计数据更新成功");
+    } else {
+      console.error("获取R2存储统计失败:", response.message);
+    }
+  } catch (error) {
+    console.error("获取R2存储统计出错:", error);
+  }
+};
+
 // 刷新数据 - 使用节流避免频繁刷新
 const refreshData = throttle(() => {
   partialLoading.value = true;
@@ -901,6 +925,8 @@ const refreshData = throttle(() => {
     fetchLoginRecords();
     // 更新用户数据
     fetchUsers();
+    // 更新R2存储统计
+    fetchR2StorageStats();
 
     partialLoading.value = false;
   }, 800);
@@ -921,6 +947,9 @@ onMounted(() => {
 
   // 加载用户数据
   fetchUsers();
+
+  // 加载R2存储统计
+  fetchR2StorageStats();
 
   // 每分钟自动刷新一次数据
   const autoRefreshInterval = setInterval(() => {

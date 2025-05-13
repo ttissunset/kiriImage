@@ -50,3 +50,17 @@ export const getAllUsers = async (params = {}) => {
     throw error
   }
 }
+
+/**
+ * 获取R2存储统计信息
+ * @returns {Promise<Object>} R2存储统计数据
+ */
+export const getR2StorageStats = async () => {
+  try {
+    const response = await apiClient.get('/api/stats/r2-storage')
+    return response.data
+  } catch (error) {
+    console.error('获取R2存储统计失败:', error)
+    throw error
+  }
+}
