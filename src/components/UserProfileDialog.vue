@@ -1,0 +1,365 @@
+<template>
+  <div v-if="modelValue" class="fixed inset-0 z-[9999] flex items-center justify-center">
+    <!-- 背景遮罩 -->
+    <div class="absolute inset-0 bg-black/50" @click="isEditing ? null : cancel"></div>
+
+    <!-- 对话框 -->
+    <div class="relative w-full max-w-md rounded-lg bg-card p-6 shadow-lg z-[10000]">
+      <h2 class="mb-4 text-xl font-semibold flex justify-between items-center">
+        <span>个人信息</span>
+        <button v-if="!isEditing" @click="startEditing" class="text-sm font-normal flex items-center text-primary">
+          <PencilIcon class="h-4 w-4 mr-1" />
+          编辑
+        </button>
+      </h2>
+
+      <!-- 头像和用户信息 -->
+      <div class="flex items-center space-x-4 mb-6">
+        <!-- 普通模式显示头像 -->
+        <div v-if="!isEditing" class="h-16 w-16 rounded-full bg-muted overflow-hidden flex items-center justify-center">
+          <img v-if="user && user.avatar" :src="user.avatar" :key="user.avatar" alt="用户头像" class="h-full w-full object-cover" />
+          <UserIcon v-else class="h-8 w-8 text-muted-foreground" />
+        </div>
+
+        <!-- 编辑模式的头像上传区域 -->
+        <div v-else class="h-16 w-16 rounded-full bg-muted overflow-hidden flex items-center justify-center relative">
+          <input type="file" ref="avatarInput" class="hidden" accept="image/*" @change="handleAvatarChange" />
+
+          <!-- 上传进度显示 -->
+          <div v-if="isUploading" class="absolute inset-0 flex items-center justify-center bg-black/30 z-10">
+            <div class="w-full h-full relative">
+              <!-- 环形进度条 -->
+              <svg class="absolute inset-0" viewBox="0 0 36 36">
+                <circle stroke="rgba(255,255,255,0.2)" fill="transparent" stroke-width="3" r="16" cx="18" cy="18" />
+                <circle stroke="rgba(255,255,255,0.9)" fill="transparent" stroke-width="3" stroke-dasharray="100" :stroke-dashoffset="100 - uploadProgress" stroke-linecap="round" r="16" cx="18" cy="18" class="transform -rotate-90 origin-center" />
+              </svg>
+              <!-- 进度文本 -->
+              <div class="absolute inset-0 flex items-center justify-center text-white text-xs font-bold">
+                {{ Math.round(uploadProgress) }}%
+              </div>
+            </div>
+          </div>
+
+          <img v-if="avatarPreview || (user && user.avatar)" :src="avatarPreview || user.avatar" :key="avatarPreview || (user && user.avatar) || 'no-avatar'" alt="用户头像" class="h-full w-full object-cover" />
+          <UserIcon v-else class="h-8 w-8 text-muted-foreground" />
+
+          <!-- 上传按钮覆盖在头像上 -->
+          <div v-if="!isUploading" class="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer" @click="$refs.avatarInput.click()">
+            <ArrowUpTrayIcon class="h-6 w-6 text-white" />
+          </div>
+        </div>
+
+        <!-- 普通模式显示用户信息 -->
+        <div v-if="!isEditing">
+          <h3 class="text-lg font-medium">{{ user ? user.nickname || user.username : '未登录' }}</h3>
+          <p class="text-sm text-muted-foreground">{{ user ? user.email : '' }}</p>
+        </div>
+
+        <!-- 编辑模式的昵称输入框 -->
+        <div v-else class="flex-1">
+          <input v-model="editNickname" type="text" class="w-full rounded-md border bg-background px-3 py-2 text-sm" placeholder="请输入昵称" />
+        </div>
+      </div>
+
+      <!-- 账户信息 -->
+      <div class="space-y-4">
+        <div class="border rounded-md p-4">
+          <h4 class="text-sm font-medium mb-2">账户信息</h4>
+          <div class="space-y-2">
+            <div class="flex justify-between">
+              <span class="text-sm text-muted-foreground">用户名</span>
+              <span class="text-sm">{{ user ? user.username : '未登录' }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-muted-foreground">用户ID</span>
+              <span class="text-sm">{{ user ? user.id : '未知' }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-muted-foreground">注册时间</span>
+              <span class="text-sm">{{ user && user.createdAt ? formatDate(user.createdAt) : '未知' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 使用统计 -->
+        <div class="border rounded-md p-4">
+          <h4 class="text-sm font-medium mb-2">使用统计</h4>
+          <div class="space-y-2">
+            <div class="flex justify-between">
+              <span class="text-sm text-muted-foreground">上传图片</span>
+              <span class="text-sm">{{ stats.uploadCount }} 张</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-muted-foreground">收藏图片</span>
+              <span class="text-sm">{{ stats.favoriteCount }} 张</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-muted-foreground">存储空间</span>
+              <span class="text-sm">{{ user?.storage?.totalHuman || '0 B' }} / {{ formatStorage(stats.storageLimit) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 按钮区域 -->
+      <div class="flex justify-end space-x-2 mt-6">
+        <!-- 普通模式按钮 -->
+        <template v-if="!isEditing">
+          <button @click="cancel" class="rounded-md bg-muted px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/80">
+            关闭
+          </button>
+          <button @click="logout" class="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90">
+            退出登录
+          </button>
+        </template>
+
+        <!-- 编辑模式按钮 -->
+        <template v-else>
+          <button @click="cancelEditing" class="rounded-md bg-muted px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/80">
+            取消
+          </button>
+          <button @click="saveUserInfo" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90" :disabled="isSubmitting">
+            <span v-if="!isSubmitting">保存</span>
+            <span v-else>保存中...</span>
+          </button>
+        </template>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { UserIcon, PencilIcon, ArrowUpTrayIcon } from '@heroicons/vue/24/outline';
+import { ref, computed, watch } from 'vue';
+import { useAuthStore } from '../stores/authStore';
+import { useGalleryStore } from '../stores/galleryStore';
+import { useFavoriteStore } from '../stores/favoriteStore';
+import { useToastStore } from '../stores/toastStore';
+import { updateUserInfo } from '../api/user';
+import { uploadImage } from '../api/images';
+
+const props = defineProps({
+  modelValue: {
+    type: Boolean,
+    required: true,
+  }
+});
+
+const emit = defineEmits(['update:modelValue']);
+const authStore = useAuthStore();
+const galleryStore = useGalleryStore();
+const favoriteStore = useFavoriteStore();
+const toastStore = useToastStore();
+
+const user = computed(() => authStore.user);
+
+// 编辑状态控制
+const isEditing = ref(false);
+const isSubmitting = ref(false);
+const editNickname = ref('');
+const avatarInput = ref(null);
+const avatarFile = ref(null);
+const avatarPreview = ref('');
+
+// 上传进度相关
+const isUploading = ref(false);
+const uploadProgress = ref(0);
+
+// 用户统计数据
+const stats = ref({
+  uploadCount: 0,
+  favoriteCount: 0,
+  storageUsed: 0,
+  storageLimit: 1024 * 1024 * 1024 * 10 // 10GB
+});
+
+// 初始化统计数据
+const initStats = async () => {
+  // 从galleryStore获取准确的图片数量
+  await galleryStore.fetchImages();
+  stats.value.uploadCount = galleryStore.images.length || 0;
+
+  // 从favoriteStore获取准确的收藏数量
+  await favoriteStore.fetchFavorites();
+  stats.value.favoriteCount = favoriteStore.favorites?.length || 0;
+
+  // 存储空间使用量现在直接从用户数据的storage对象中获取
+};
+
+// 监听用户信息变化，更新编辑表单
+watch(() => user.value, (newUser) => {
+  if (newUser) {
+    editNickname.value = newUser.nickname || newUser.username || '';
+  }
+}, { immediate: true });
+
+// 开始编辑
+const startEditing = () => {
+  isEditing.value = true;
+  if (user.value) {
+    editNickname.value = user.value.nickname || user.value.username || '';
+  }
+  avatarPreview.value = '';
+  avatarFile.value = null;
+};
+
+// 取消编辑
+const cancelEditing = () => {
+  isEditing.value = false;
+  avatarPreview.value = '';
+  avatarFile.value = null;
+};
+
+// 处理头像上传
+const handleAvatarChange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // 验证文件类型
+  if (!file.type.match('image.*')) {
+    toastStore.error('请上传图片文件');
+    return;
+  }
+
+  // 验证文件大小（限制为5MB）
+  if (file.size > 5 * 1024 * 1024) {
+    toastStore.error('图片大小不能超过5MB');
+    return;
+  }
+
+  avatarFile.value = file;
+
+  // 创建预览
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    avatarPreview.value = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+// 保存用户信息
+const saveUserInfo = async () => {
+  if (isSubmitting.value) return;
+
+  isSubmitting.value = true;
+  let avatarUrl = user.value?.avatar || '';
+
+  try {
+    // 如果有新上传的头像，先上传头像获取URL
+    if (avatarFile.value) {
+      // 开始上传
+      isUploading.value = true;
+      uploadProgress.value = 0;
+
+      // 创建FormData对象上传头像
+      const formData = new FormData();
+      formData.append('file', avatarFile.value);
+      formData.append('name', 'avatar_' + Date.now()); // 给头像一个唯一的名称
+
+      // 上传头像到服务器
+      const uploadResponse = await uploadImage(formData, {
+        onUploadProgress: (progressEvent) => {
+          // 计算上传进度百分比
+          let percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+
+          // 上传结束前，最高显示到98%，表示还有服务器处理时间
+          if (percent >= 98) {
+            percent = 98;
+          }
+
+          uploadProgress.value = percent;
+        }
+      });
+
+      // 上传结束
+      uploadProgress.value = 100;
+
+      if (uploadResponse.code === 200) {
+        // 获取头像URL
+        avatarUrl = uploadResponse.data.url;
+      } else {
+        throw new Error(uploadResponse.message || '头像上传失败');
+      }
+
+      // 结束上传状态
+      setTimeout(() => {
+        isUploading.value = false;
+      }, 300); // 短暂延迟，让用户看到100%
+    }
+
+    // 调用更新用户信息API
+    const response = await updateUserInfo({
+      nickname: editNickname.value,
+      avatar: avatarUrl
+    });
+
+    if (response.code === 200) {
+      // 清除临时预览
+      avatarPreview.value = '';
+      avatarFile.value = null;
+
+      // 尝试从服务器获取最新用户信息
+      await authStore.fetchUserInfo();
+
+      // 为了确保头像立即更新，手动更新本地用户信息
+      // 这样即使服务器缓存问题导致fetchUserInfo未返回最新头像，UI依然会更新
+      authStore.updateUser({
+        ...user.value,
+        nickname: editNickname.value,
+        avatar: avatarUrl + '?t=' + new Date().getTime() // 添加时间戳避免浏览器缓存
+      });
+
+      toastStore.success('个人信息更新成功');
+      isEditing.value = false;
+    } else {
+      throw new Error(response.message || '更新用户信息失败');
+    }
+
+  } catch (error) {
+    console.error('更新用户信息失败:', error);
+    toastStore.error('更新用户信息失败: ' + error.message);
+    isUploading.value = false;
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+// 格式化日期
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
+// 格式化存储空间大小
+const formatStorage = (bytes) => {
+  if (bytes < 1024) return bytes + ' B';
+  else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  else if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  else return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+};
+
+// 关闭对话框
+const cancel = () => {
+  emit('update:modelValue', false);
+};
+
+// 退出登录
+const logout = async () => {
+  const confirmed = await toastStore.confirm('确定要退出登录吗？', {
+    title: '退出确认'
+  });
+
+  if (confirmed) {
+    authStore.logout();
+    toastStore.success('已成功退出登录');
+    cancel();
+  }
+};
+
+// 初始化统计数据
+initStats();
+</script> 
