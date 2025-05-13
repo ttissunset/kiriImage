@@ -733,30 +733,59 @@ const batchUploadFiles = async (files) => {
     if (response.code === 200) {
       // 处理批量上传结果
       const { successful, failed } = response.data;
+      let processedFiles = new Set(); // 追踪已处理的文件
 
       // 更新成功上传的文件状态
-      successful.items.forEach((item) => {
-        const fileIndex = validFiles.findIndex((f) => f.name === item.name);
-        if (fileIndex !== -1) {
-          validFiles[fileIndex].status = "success";
-          validFiles[fileIndex].progress = 100;
+      if (successful && successful.items) {
+        successful.items.forEach((item) => {
+          const fileIndex = validFiles.findIndex((f) => f.name === item.name);
+          if (fileIndex !== -1) {
+            validFiles[fileIndex].status = "success";
+            validFiles[fileIndex].progress = 100;
+            processedFiles.add(fileIndex);
 
-          // 添加到图库
-          galleryStore.addImage(item);
-        }
-      });
+            // 添加到图库
+            galleryStore.addImage(item);
+          }
+        });
+      }
 
       // 更新失败的文件状态
-      failed.items.forEach((item) => {
-        const fileIndex = validFiles.findIndex(
-          (f) => f.name === item.originalName
-        );
-        if (fileIndex !== -1) {
-          validFiles[fileIndex].status = "error";
-          validFiles[fileIndex].error = item.message || "上传失败";
-          validFiles[fileIndex].progress = 0;
+      if (failed && failed.items) {
+        failed.items.forEach((item) => {
+          const fileIndex = validFiles.findIndex(
+            (f) => f.name === item.originalName
+          );
+          if (fileIndex !== -1) {
+            validFiles[fileIndex].status = "error";
+            validFiles[fileIndex].error = item.message || "上传失败";
+            validFiles[fileIndex].progress = 0;
+            processedFiles.add(fileIndex);
+          }
+        });
+      }
+
+      // 处理剩余未被明确标记的文件
+      // 如果服务器返回了成功但没有包含某些文件的详细信息，我们仍将它们标记为成功
+      validFiles.forEach((file, index) => {
+        if (!processedFiles.has(index) && file.status === "uploading") {
+          // 文件已上传但未被服务器响应明确标记，假定成功
+          file.status = "success";
+          file.progress = 100;
         }
       });
+      
+      // 确保所有文件的进度更新都已经应用
+      setTimeout(() => {
+        // 强制更新进度为100%
+        validFiles.forEach(file => {
+          if (file.status === "success" && file.progress !== 100) {
+            file.progress = 100;
+          }
+        });
+        // 确保总体进度也更新到100%
+        uploadProgress.value = 100;
+      }, 100);
     } else {
       // 整个批量请求失败
       validFiles.forEach((file) => {

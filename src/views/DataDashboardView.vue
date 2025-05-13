@@ -482,6 +482,8 @@ import {
   getLoginRecords,
   getAllUsers,
   getR2StorageStats,
+  getUploadRecords,
+  getDailyUploadStats
 } from "../api/stats";
 
 const authStore = useAuthStore();
@@ -498,12 +500,12 @@ const stats = ref({
 
 // 上传统计数据
 const uploadStats = ref({
-  todayUploads: 48,
-  totalUploads: 3842,
-  averageSize: 4.2 * 1024 * 1024, // 4.2MB
-  imageCount: 2856,
-  videoCount: 687,
-  otherCount: 299,
+  todayUploads: 0,
+  totalUploads: 0,
+  averageSize: 0,
+  imageCount: 0,
+  videoCount: 0,
+  otherCount: 0,
 });
 
 // 最近访问IP数据
@@ -546,57 +548,30 @@ const formatDate = (dateString) => {
   });
 };
 
-// 模拟最近上传记录
-const recentUploads = ref([
-  {
-    fileName: "sunset_vacation_2023.jpg",
-    fileType: "图片",
-    fileSize: 5.2 * 1024 * 1024,
-    uploadTime: "2023-08-10 15:45:22",
-    username: "kiri",
-    status: "成功",
-  },
-  {
-    fileName: "company_presentation.mp4",
-    fileType: "视频",
-    fileSize: 75 * 1024 * 1024,
-    uploadTime: "2023-08-10 15:30:15",
-    username: "image_master",
-    status: "成功",
-  },
-  {
-    fileName: "family_trip.jpg",
-    fileType: "图片",
-    fileSize: 3.8 * 1024 * 1024,
-    uploadTime: "2023-08-10 14:22:08",
-    username: "user123",
-    status: "成功",
-  },
-  {
-    fileName: "project_documentation.pdf",
-    fileType: "文档",
-    fileSize: 2.5 * 1024 * 1024,
-    uploadTime: "2023-08-10 14:15:30",
-    username: "collector",
-    status: "成功",
-  },
-  {
-    fileName: "business_proposal.pptx",
-    fileType: "文档",
-    fileSize: 8.7 * 1024 * 1024,
-    uploadTime: "2023-08-10 14:05:18",
-    username: "user123",
-    status: "失败",
-  },
-  {
-    fileName: "birthday_party.mp4",
-    fileType: "视频",
-    fileSize: 120 * 1024 * 1024,
-    uploadTime: "2023-08-10 12:45:30",
-    username: "kiri",
-    status: "成功",
-  },
-]);
+// 最近上传记录
+const recentUploads = ref([]);
+
+// 加载上传记录
+const fetchUploadRecords = async () => {
+  try {
+    const response = await getUploadRecords({ limit: 6 }); // 只获取最近6条记录
+    if (response.code === 200) {
+      // 将API返回的数据转换为组件中使用的格式
+      recentUploads.value = response.data.items.map((record) => ({
+        fileName: record.fileCount > 1 ? `批量上传(${record.fileCount}个文件)` : `文件上传`,
+        fileType: record.fileType === "image" ? "图片" : (record.fileType === "video" ? "视频" : "其他"),
+        fileSize: record.fileSize,
+        uploadTime: formatDate(record.createdAt),
+        username: record.username,
+        status: "成功", // 假设所有记录都是成功的
+      }));
+    } else {
+      console.error("获取上传记录失败:", response.message);
+    }
+  } catch (error) {
+    console.error("获取上传记录出错:", error);
+  }
+};
 
 // 系统硬件信息数据
 const systemInfo = ref({
@@ -926,6 +901,73 @@ const fetchR2StorageStats = async () => {
   }
 };
 
+// 加载每日上传统计
+const fetchDailyUploadStats = async () => {
+  try {
+    // 获取今日数据
+    const todayResponse = await getDailyUploadStats();
+    if (todayResponse.code === 200) {
+      uploadStats.value.todayUploads = todayResponse.data.totalFiles || 0;
+      uploadStats.value.imageCount = todayResponse.data.imageFiles || 0;
+      uploadStats.value.videoCount = todayResponse.data.videoFiles || 0;
+      uploadStats.value.otherCount = (todayResponse.data.totalFiles || 0) - 
+                                    (todayResponse.data.imageFiles || 0) - 
+                                    (todayResponse.data.videoFiles || 0);
+      
+      // 更新上传类型分布图表数据
+      uploadTypeChartSeries.value = [
+        uploadStats.value.imageCount,
+        uploadStats.value.videoCount,
+        uploadStats.value.otherCount
+      ];
+    }
+    
+    // 获取过去12天的数据来生成趋势图
+    const trendData = [];
+    const categories = [];
+    const today = new Date();
+    
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(today.getDate() - i);
+      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      categories.push(`${date.getMonth() + 1}/${date.getDate()}`);
+      
+      try {
+        const response = await getDailyUploadStats({ date: dateStr });
+        if (response.code === 200) {
+          trendData.push(response.data.totalFiles || 0);
+          
+          // 计算总上传数
+          if (i === 0) { // 如果是最后一天（今天），更新平均大小
+            uploadStats.value.totalUploads = response.data.totalFiles || 0;
+            uploadStats.value.averageSize = response.data.totalFiles > 0 ? 
+              (response.data.totalSize?.bytes || 0) / response.data.totalFiles : 0;
+          } else {
+            uploadStats.value.totalUploads += response.data.totalFiles || 0;
+          }
+        } else {
+          trendData.push(0);
+        }
+      } catch (error) {
+        console.error(`获取${dateStr}上传统计出错:`, error);
+        trendData.push(0);
+      }
+    }
+    
+    // 更新上传趋势图表数据
+    uploadTrendChartSeries.value = [{
+      name: "上传数量",
+      data: trendData
+    }];
+    
+    uploadTrendChartOptions.value.xaxis.categories = categories;
+    
+  } catch (error) {
+    console.error("获取上传统计出错:", error);
+  }
+};
+
 // 刷新数据 - 使用节流避免频繁刷新
 const refreshData = throttle(() => {
   partialLoading.value = true;
@@ -940,6 +982,10 @@ const refreshData = throttle(() => {
     fetchUsers();
     // 更新R2存储统计
     fetchR2StorageStats();
+    // 更新上传记录
+    fetchUploadRecords();
+    // 更新上传统计
+    fetchDailyUploadStats();
 
     partialLoading.value = false;
   }, 800);
@@ -969,6 +1015,12 @@ onMounted(() => {
 
   // 加载R2存储统计
   fetchR2StorageStats();
+  
+  // 加载上传记录
+  fetchUploadRecords();
+  
+  // 加载上传统计
+  fetchDailyUploadStats();
 
   // 每分钟自动刷新一次数据
   const autoRefreshInterval = setInterval(() => {

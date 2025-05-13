@@ -64,3 +64,40 @@ export const getR2StorageStats = async () => {
     throw error
   }
 }
+
+/**
+ * 获取上传记录
+ * @param {Object} params 查询参数
+ * @param {number} [params.page=1] 页码
+ * @param {number} [params.limit=20] 每页记录数
+ * @param {string} [params.username] 按上传用户名筛选
+ * @param {string} [params.fileType] 按文件类型筛选，可选值: image, video
+ * @param {string} [params.startDate] 开始日期，格式: YYYY-MM-DD
+ * @param {string} [params.endDate] 结束日期，格式: YYYY-MM-DD
+ * @returns {Promise<Object>} 上传记录数据
+ */
+export const getUploadRecords = async (params = {}) => {
+  try {
+    const response = await apiClient.get('/api/stats/upload-records', { params })
+    return response.data
+  } catch (error) {
+    console.error('获取上传记录失败:', error)
+    throw error
+  }
+}
+
+/**
+ * 获取指定日期上传统计
+ * @param {Object} params 查询参数
+ * @param {string} [params.date] 指定查询日期，格式: YYYY-MM-DD，不传则默认为当天
+ * @returns {Promise<Object>} 日期上传统计数据
+ */
+export const getDailyUploadStats = async (params = {}) => {
+  try {
+    const response = await apiClient.get('/api/stats/daily-uploads', { params })
+    return response.data
+  } catch (error) {
+    console.error('获取日期上传统计失败:', error)
+    throw error
+  }
+}
