@@ -40,7 +40,7 @@
               <div>
                 <div class="flex items-center justify-between">
                   <span class="text-xs text-muted-foreground">内存</span>
-                  <span class="text-xs font-medium">{{ systemInfo.memory.total }} (空闲: {{ systemInfo.memory.free }})</span>
+                  <span class="text-xs font-medium">{{ systemInfo.memory.total }} (已用: {{ systemInfo.memory.used }})</span>
                 </div>
                 <div class="flex items-center mt-1">
                   <div class="w-full bg-muted/60 rounded-full h-1.5 mr-2">
@@ -60,9 +60,17 @@
                   <span class="text-xs text-muted-foreground">操作系统</span>
                   <span class="text-xs font-medium">{{ systemInfo.os }}</span>
                 </div>
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between mb-1">
                   <span class="text-xs text-muted-foreground">IP地址</span>
                   <span class="text-xs font-medium">{{ systemInfo.ip }}</span>
+                </div>
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-xs text-muted-foreground">ISP提供商</span>
+                  <span class="text-xs font-medium">{{ systemInfo.isp }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-muted-foreground">地理位置</span>
+                  <span class="text-xs font-medium">{{ systemInfo.region }}</span>
                 </div>
               </div>
             </div>
@@ -99,23 +107,31 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
           <!-- 访客IP列表 -->
           <div class="bg-card rounded-lg shadow-sm p-3 border border-border/60">
-            <h2 class="text-sm font-medium text-muted-foreground mb-2">最近访问IP</h2>
+            <h2 class="text-sm font-medium text-muted-foreground mb-2">最近登录记录</h2>
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
                 <thead>
                   <tr class="border-b border-border/60">
+                    <th class="text-left py-1.5 px-2 text-xs font-medium text-muted-foreground">用户名</th>
                     <th class="text-left py-1.5 px-2 text-xs font-medium text-muted-foreground">IP地址</th>
                     <th class="text-left py-1.5 px-2 text-xs font-medium text-muted-foreground">位置</th>
+                    <th class="text-left py-1.5 px-2 text-xs font-medium text-muted-foreground">设备</th>
                     <th class="text-left py-1.5 px-2 text-xs font-medium text-muted-foreground">访问时间</th>
-                    <th class="text-left py-1.5 px-2 text-xs font-medium text-muted-foreground">访问次数</th>
+                    <th class="text-left py-1.5 px-2 text-xs font-medium text-muted-foreground">状态</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(ip, index) in recentIPs" :key="index" class="border-b border-border/60 hover:bg-muted/40">
+                    <td class="py-1.5 px-2 font-medium">{{ ip.username }}</td>
                     <td class="py-1.5 px-2">{{ ip.address }}</td>
                     <td class="py-1.5 px-2">{{ ip.location }}</td>
+                    <td class="py-1.5 px-2">{{ ip.browser }} / {{ ip.os }}</td>
                     <td class="py-1.5 px-2">{{ ip.time }}</td>
-                    <td class="py-1.5 px-2 font-medium">{{ ip.count }}</td>
+                    <td class="py-1.5 px-2">
+                      <span :class="`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ip.status === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`">
+                        {{ ip.status === 'success' ? '成功' : '失败' }}
+                      </span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -258,7 +274,7 @@ import VueApexCharts from 'vue3-apexcharts';
 import { ArrowPathIcon } from '@heroicons/vue/24/outline';
 import Button from '../components/ui/Button.vue';
 import { throttle } from '../utils/performance';
-import { getSystemInfo } from '../api/stats';
+import { getSystemInfo, getLoginRecords } from '../api/stats';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -284,14 +300,45 @@ const uploadStats = ref({
   otherCount: 299
 });
 
-// 模拟最近访问IP
-const recentIPs = ref([
-  { address: '203.0.113.1', location: '中国北京', time: '2023-08-10 15:42:36', count: 28 },
-  { address: '198.51.100.42', location: '中国上海', time: '2023-08-10 15:30:12', count: 15 },
-  { address: '192.0.2.153', location: '中国广州', time: '2023-08-10 15:22:08', count: 42 },
-  { address: '203.0.113.42', location: '中国深圳', time: '2023-08-10 14:58:47', count: 7 },
-  { address: '198.51.100.23', location: '美国纽约', time: '2023-08-10 14:45:30', count: 3 },
-]);
+// 最近访问IP数据
+const recentIPs = ref([]);
+
+// 加载登录记录
+const fetchLoginRecords = async () => {
+  try {
+    const response = await getLoginRecords({ limit: 5 }); // 只获取最近5条记录
+    if (response.code === 200) {
+      // 将API返回的数据转换为组件中使用的格式
+      recentIPs.value = response.data.items.map(record => ({
+        address: record.ip,
+        location: record.region,
+        time: formatDate(record.createdAt),
+        count: 1, // API中没有计数，默认为1
+        username: record.username,
+        status: record.status,
+        browser: record.browser,
+        os: record.os
+      }));
+    } else {
+      console.error('获取登录记录失败:', response.message);
+    }
+  } catch (error) {
+    console.error('获取登录记录出错:', error);
+  }
+};
+
+// 格式化日期
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+};
 
 // 模拟最近上传记录
 const recentUploads = ref([
@@ -308,19 +355,21 @@ const systemInfo = ref({
   cpu: '',
   memory: {
     total: '',
-    free: '',
+    used: '',
     usage: ''
   },
   gpu: '',
   os: '',
-  ip: ''
+  ip: '',
+  isp: '',
+  region: ''
 });
 
 // 加载系统信息
 const fetchSystemInfo = async () => {
   try {
     const response = await getSystemInfo();
-    if (response.code === 0) {
+    if (response.code === 200) {
       systemInfo.value = response.data;
     } else {
       console.error('获取系统信息失败:', response.message);
@@ -564,6 +613,8 @@ const refreshData = throttle(() => {
   setTimeout(() => {
     // 更新系统信息
     fetchSystemInfo();
+    // 更新登录记录
+    fetchLoginRecords();
 
     partialLoading.value = false;
   }, 800);
@@ -578,6 +629,9 @@ onMounted(() => {
 
   // 加载系统信息
   fetchSystemInfo();
+  
+  // 加载登录记录
+  fetchLoginRecords();
 
   // 每分钟自动刷新一次数据
   const autoRefreshInterval = setInterval(() => {
