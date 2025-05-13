@@ -9,21 +9,34 @@
           数据统计中心
         </h5>
 
-        <!-- 刷新按钮 -->
-        <Button
-          variant="outline"
-          size="icon"
-          @click="refreshData"
-          title="刷新数据"
-          class="h-7 w-7"
-          :disabled="loading"
-        >
-          <ArrowPathIcon
-            class="h-3.5 w-3.5"
-            :class="{ 'animate-spin': loading }"
-          />
-          <span v-if="partialLoading" class="sr-only">更新中...</span>
-        </Button>
+        <!-- 刷新按钮和移动端菜单 -->
+        <div class="flex items-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            @click="refreshData"
+            title="刷新数据"
+            class="h-7 w-7"
+            :disabled="loading"
+          >
+            <ArrowPathIcon
+              class="h-3.5 w-3.5"
+              :class="{ 'animate-spin': loading }"
+            />
+            <span v-if="partialLoading" class="sr-only">更新中...</span>
+          </Button>
+
+          <!-- 菜单按钮 - 只在移动端显示 -->
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-7 w-7 ml-1 md:hidden"
+            @click="toggleMobileMenu"
+            title="菜单"
+          >
+            <Bars3Icon class="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
     </div>
 
@@ -461,7 +474,7 @@ import { ref, onMounted, onUnmounted } from "vue";
 import { useAuthStore } from "../stores/authStore";
 import { useRouter } from "vue-router";
 import VueApexCharts from "vue3-apexcharts";
-import { ArrowPathIcon } from "@heroicons/vue/24/outline";
+import { ArrowPathIcon, Bars3Icon } from "@heroicons/vue/24/outline";
 import Button from "../components/ui/Button.vue";
 import { throttle } from "../utils/performance";
 import {
@@ -901,8 +914,8 @@ const fetchR2StorageStats = async () => {
     if (response.code === 200) {
       // 更新R2存储统计数据
       stats.value.r2UsedStorage = response.data.totalStorage.bytes;
-      stats.value.r2Requests = response.data.totalFiles; 
-      stats.value.bucketName = response.data.bucketName; 
+      stats.value.r2Requests = response.data.totalFiles;
+      stats.value.bucketName = response.data.bucketName;
 
       console.log("R2存储统计数据更新成功");
     } else {
@@ -931,6 +944,12 @@ const refreshData = throttle(() => {
     partialLoading.value = false;
   }, 800);
 }, 1000);
+
+// 移动端菜单控制
+const toggleMobileMenu = () => {
+  // 触发App组件中的toggleMobileMenu方法
+  document.dispatchEvent(new CustomEvent("toggle-mobile-menu"));
+};
 
 // 组件挂载时执行
 onMounted(() => {

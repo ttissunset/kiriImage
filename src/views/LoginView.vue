@@ -1,9 +1,9 @@
 <template>
   <div class="flex h-screen w-full bg-background">
-    <!-- 左侧随机大图 -->
+    <!-- 左侧随机大图 - 仅桌面端显示 -->
     <div class="hidden md:block md:w-1/2 lg:w-2/3 relative overflow-hidden">
-      <img 
-        :src="`https://img.loliapi.cn/i/pc/img${randomImageId}.webp`" 
+      <img
+        :src="`https://img.loliapi.cn/i/pe/img${randomImageId}.webp`"
         class="h-full w-full object-cover"
       />
       <div class="absolute inset-0 bg-black/15 flex items-start justify-start">
@@ -12,41 +12,54 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 右侧登录表单 -->
-    <div class="w-full md:w-1/2 lg:w-1/3 flex items-center justify-center bg-background">
-      <div class="w-full max-w-md space-y-8 p-8 md:p-10">
+    <div
+      class="w-full md:w-1/2 lg:w-1/3 flex items-center justify-center bg-background md:bg-background relative"
+    >
+      <!-- 移动端背景图 -->
+      <div class="absolute inset-0 w-full h-full overflow-hidden md:hidden">
+        <img
+          :src="`https://img.loliapi.cn/i/pe/img${randomImageId}.webp`"
+          class="h-full w-full object-cover"
+        />
+        <div class="absolute inset-0 bg-black/40"></div>
+      </div>
+      
+      <div class="w-full max-w-md space-y-8 p-8 md:p-10 relative z-10">
+        
         <!-- 移动端上的品牌Logo和标题 -->
         <div class="text-center md:hidden">
-          <div class="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-10 w-10 text-primary">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <circle cx="8.5" cy="8.5" r="1.5"></circle>
-              <path d="M21 15l-5-5L5 21"></path>
-            </svg>
-          </div>
-          <h1 class="text-3xl font-bold tracking-tight text-foreground">KiriImage</h1>
-          <p class="mt-3 text-sm text-muted-foreground">请登录您的账号以访问在线相册</p>
+          <h1 class="text-3xl font-bold tracking-tight text-white">
+            KiriImage
+          </h1>
+          <p class="mt-3 text-sm text-white/80">
+            请登录您的账号以访问在线相册
+          </p>
         </div>
 
         <!-- 桌面端的登录标题 -->
         <div class="hidden md:block">
-          <h2 class="text-2xl font-bold tracking-tight text-foreground">欢迎回来</h2>
-          <p class="mt-2 text-sm text-muted-foreground">请登录您的账号继续使用</p>
+          <h2 class="text-2xl font-bold tracking-tight text-foreground">
+            欢迎回来
+          </h2>
+          <p class="mt-2 text-sm text-muted-foreground">
+            请登录您的账号继续使用
+          </p>
         </div>
 
         <!-- 登录表单 -->
-        <form @submit.prevent="handleLogin" class="space-y-6">
+        <form @submit.prevent="handleLogin" class="space-y-6 relative z-10">
           <div class="space-y-4">
             <!-- 用户名输入 -->
             <div class="relative">
-              <label 
-                for="username" 
+              <label
+                for="username"
                 class="absolute left-3 text-sm font-medium transition-all"
                 :class="[
-                  username || isFocusedUsername ? 
-                  'top-2 text-xs text-primary' : 
-                  'top-1/2 -translate-y-1/2 text-muted-foreground'
+                  username || isFocusedUsername
+                    ? 'top-2 text-xs text-primary'
+                    : 'top-1/2 -translate-y-1/2 text-muted-foreground md:text-muted-foreground text-white/80',
                 ]"
               >
                 输入用户名
@@ -58,9 +71,9 @@
                 required
                 class="w-full rounded-md border px-3 pt-6 pb-2 transition-all focus:outline-none"
                 :class="[
-                  isFocusedUsername ? 
-                  'border-primary ring-1 ring-primary' : 
-                  'border-input bg-background'
+                  isFocusedUsername
+                    ? 'border-primary ring-1 ring-primary'
+                    : 'border-input bg-background/95 md:bg-background',
                 ]"
                 @focus="isFocusedUsername = true"
                 @blur="isFocusedUsername = false"
@@ -70,13 +83,13 @@
 
             <!-- 密码输入 -->
             <div class="relative">
-              <label 
-                for="password" 
+              <label
+                for="password"
                 class="absolute left-3 text-sm font-medium transition-all"
                 :class="[
-                  password || isFocusedPassword ? 
-                  'top-2 text-xs text-primary' : 
-                  'top-1/2 -translate-y-1/2 text-muted-foreground'
+                  password || isFocusedPassword
+                    ? 'top-2 text-xs text-primary'
+                    : 'top-1/2 -translate-y-1/2 text-muted-foreground md:text-muted-foreground text-white/80',
                 ]"
               >
                 输入密码
@@ -88,9 +101,9 @@
                 required
                 class="w-full rounded-md border px-3 pt-6 pb-2 transition-all focus:outline-none"
                 :class="[
-                  isFocusedPassword ? 
-                  'border-primary ring-1 ring-primary' : 
-                  'border-input bg-background'
+                  isFocusedPassword
+                    ? 'border-primary ring-1 ring-primary'
+                    : 'border-input bg-background/95 md:bg-background',
                 ]"
                 @focus="isFocusedPassword = true"
                 @blur="isFocusedPassword = false"
@@ -101,7 +114,9 @@
 
           <!-- 错误消息显示 -->
           <div v-if="authStore.error" class="rounded-md bg-destructive/10 p-4">
-            <p class="text-sm font-medium text-destructive">{{ authStore.error }}</p>
+            <p class="text-sm font-medium text-destructive">
+              {{ authStore.error }}
+            </p>
           </div>
 
           <!-- 登录按钮 -->
@@ -111,17 +126,22 @@
               class="w-full rounded-md bg-primary px-4 py-3 text-base font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
               :disabled="authStore.loading"
             >
-              <span v-if="authStore.loading" class="flex items-center justify-center">
-                <span class="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+              <span
+                v-if="authStore.loading"
+                class="flex items-center justify-center"
+              >
+                <span
+                  class="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+                ></span>
                 登录中...
               </span>
               <span v-else>登录</span>
             </button>
           </div>
         </form>
-        
+
         <!-- 版权信息 -->
-        <div class="mt-8 text-center text-xs text-muted-foreground">
+        <div class="mt-8 text-center text-xs md:text-muted-foreground text-white/70 relative z-10">
           &copy; {{ new Date().getFullYear() }} KiriImage By Kiri · 保留所有权利
         </div>
       </div>
@@ -156,4 +176,4 @@ const handleLogin = async () => {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
-</style> 
+</style>
