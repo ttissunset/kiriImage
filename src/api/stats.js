@@ -32,3 +32,21 @@ export const getLoginRecords = async (params = {}) => {
     throw error
   }
 }
+
+/**
+ * 获取所有用户信息
+ * @param {Object} params 查询参数
+ * @param {number} [params.page=1] 页码
+ * @param {number} [params.limit=20] 每页记录数
+ * @param {string} [params.keyword] 按用户名搜索
+ * @returns {Promise<Object>} 用户信息数据
+ */
+export const getAllUsers = async (params = {}) => {
+  try {
+    const response = await apiClient.get('/api/stats/users', { params })
+    return response.data
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+    throw error
+  }
+}
