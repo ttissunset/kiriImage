@@ -25,23 +25,23 @@
         <button title="信息" class="hidden sm:block text-muted-foreground hover:text-foreground">
           <InformationCircleIcon class="w-5 h-5" />
         </button>
-        <button title="收藏" class="text-muted-foreground hover:text-foreground" :class="{ 'text-primary': isFavorite }" @click="toggleFavorite">
+        <button title="收藏" class="text-muted-foreground hover:text-foreground p-1" :class="{ 'text-primary': isFavorite }" @click="toggleFavorite">
           <HeartIcon class="w-5 h-5" />
         </button>
-        <button title="下载" class="text-muted-foreground hover:text-foreground" @click="downloadImage">
+        <button title="下载" class="text-muted-foreground hover:text-foreground p-1" @click="downloadImage">
           <ArrowDownTrayIcon class="w-5 h-5" />
         </button>
         <button title="分享" class="hidden sm:block text-muted-foreground hover:text-foreground">
           <ShareIcon class="w-5 h-5" />
         </button>
-        <button title="删除" class="text-muted-foreground hover:text-destructive" @click="deleteImage">
+        <button title="删除" class="text-muted-foreground hover:text-destructive p-1" @click="deleteImage">
           <TrashIcon class="w-5 h-5" />
         </button>
       </div>
     </div>
 
     <!-- 中间图片预览区 -->
-    <div class="flex-1 flex items-center justify-center bg-muted/20 overflow-hidden" :style="{
+    <div class="flex-1 flex items-center justify-center bg-muted/20 overflow-hidden relative" :style="{
         height: 'calc(100vh - ' + (isMobile ? '120px' : '140px') + ')',
       }">
       <!-- 上一张/下一张按钮 -->
@@ -51,15 +51,21 @@
 
       <!-- 添加触摸滑动支持 -->
       <div ref="swipeContainer" class="w-full h-full flex items-center justify-center overflow-hidden" @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd">
+        <!-- 加载指示器 -->
+        <div v-if="isLoading" class="flex flex-col items-center justify-center gap-2">
+          <div class="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+          <p class="text-muted-foreground text-sm">加载中...</p>
+        </div>
+
         <!-- 图片预览 -->
-        <img v-if="isImage" ref="imageRef" :src="currentImage.url" :alt="currentImage.name" class="max-h-full max-w-full object-contain" @click.stop @error="handleMediaError" />
+        <img v-else-if="isImage && imageReady && currentImage.url" ref="imageRef" :src="currentImage.url" :alt="currentImage.name" class="max-h-full max-w-full object-contain" @click.stop @load="handleImageLoaded" @error="handleMediaError" />
 
         <!-- 视频预览 -->
-        <div v-else class="relative w-full h-full flex items-center justify-center">
+        <div v-else-if="!isImage && videoReady && currentImage.url" class="relative w-full h-full flex items-center justify-center">
           <video ref="videoRef" :src="currentImage.url" controls :class="[
               'w-full', 
               videoViewMode === 'cover' ? 'object-cover h-full' : 'object-contain h-auto'
-            ]" @click.stop @error="handleMediaError">
+            ]" @click.stop @error="handleMediaError" @loadeddata="handleVideoLoaded">
             您的浏览器不支持视频播放
           </video>
 
@@ -84,6 +90,13 @@
       <button v-if="currentIndex < totalImages - 1" @click.stop="nextImage" class="absolute right-4 bg-background/80 rounded-full p-2 text-muted-foreground hover:text-foreground sm:opacity-50 sm:hover:opacity-100 z-10">
         <ChevronRightIcon class="w-6 h-6" />
       </button>
+
+      <!-- 移动端删除按钮 - 固定在底部方便点击 -->
+      <div v-if="isMobile" class="absolute bottom-4 right-4 z-20">
+        <button @click="deleteImage" class="bg-destructive/90 text-destructive-foreground rounded-full p-3 shadow-lg">
+          <TrashIcon class="w-5 h-5" />
+        </button>
+      </div>
     </div>
 
     <!-- 底部缩略图列表 - 所有设备都显示 -->
@@ -116,7 +129,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick, onBeforeMount } from "vue";
+import { ref, computed, onMounted, watch, nextTick, onBeforeMount, onBeforeUnmount } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useGalleryStore } from "../stores/galleryStore";
 import { useFavoriteStore } from "../stores/favoriteStore";
@@ -160,17 +173,30 @@ const totalImages = computed(() => images.value.length);
 const currentIndex = ref(0);
 
 // 初始化时设置正确的索引
-onMounted(() => {
+onMounted(async () => {
+  // 首先确保数据已加载
   if (galleryStore.images.length === 0) {
-    galleryStore.fetchImages().then(() => {
+    try {
+      // 先设置加载状态，防止可能的错误显示
+      loadError.value = null;
+      await galleryStore.fetchImages();
+      // 数据加载完成后再查找索引
       findAndSetCurrentImageIndex();
-    });
+    } catch (err) {
+      console.error('加载图片数据失败:', err);
+      loadError.value = '加载图片数据失败，请重试';
+    }
   } else {
     findAndSetCurrentImageIndex();
   }
 
   // 初始加载时滚动到当前缩略图
-  scrollToCurrentThumbnail();
+  nextTick(() => {
+    scrollToCurrentThumbnail();
+  });
+
+  // 添加页面可见性变化监听，当页面重新可见时刷新数据
+  document.addEventListener('visibilitychange', handleVisibilityChange);
 });
 
 // 查找并设置当前图片的索引
@@ -180,14 +206,19 @@ const findAndSetCurrentImageIndex = () => {
   if (index !== -1) {
     currentIndex.value = index;
     updateRoute();
+  } else {
+    // 如果没有找到对应的图片，先不做任何更新
+    // 等待图片数据加载完成后再尝试
+    console.log('未找到图片ID，等待数据加载完成');
   }
 };
 
 // 缩略图滚动相关的 refs
 const thumbnailsContainer = ref(null);
 const currentThumbnailRef = ref(null);
-const imageRef = ref(null); // 添加图片元素引用
-const swipeContainer = ref(null); // 添加滑动容器引用
+const imageRef = ref(null); // 图片元素引用
+const videoRef = ref(null); // 视频元素引用
+const swipeContainer = ref(null); // 滑动容器引用
 
 // 触摸滑动相关
 const touchStartX = ref(0);
@@ -313,32 +344,125 @@ const isMediaImage = (mediaItem) => {
   );
 };
 
-// 媒体加载错误处理
+// 媒体加载状态管理
+const isLoading = ref(true);
+const imageReady = ref(false);
+const videoReady = ref(false);
 const loadError = ref(null);
-const videoRef = ref(null);
+const loadRetryCount = ref(0);
+const maxRetryCount = 3;
 
+// 图片加载完成处理函数
+const handleImageLoaded = () => {
+  console.log('图片加载成功');
+  imageReady.value = true;
+  isLoading.value = false;
+  loadError.value = null;
+  loadRetryCount.value = 0; // 重置重试计数
+};
+
+// 视频加载完成处理函数
+const handleVideoLoaded = () => {
+  console.log('视频加载成功');
+  videoReady.value = true;
+  isLoading.value = false;
+  loadError.value = null;
+  loadRetryCount.value = 0; // 重置重试计数
+};
+
+// 媒体加载错误处理
 const handleMediaError = (event) => {
   console.error("媒体加载失败:", event);
-  loadError.value = `无法加载文件: ${currentImage.value.name}`;
-};
 
-const retryLoading = () => {
-  loadError.value = null;
-  // 强制刷新媒体元素
-  if (isImage.value && imageRef.value) {
-    const currentSrc = imageRef.value.src;
-    imageRef.value.src = "";
+  // 增加重试计数
+  loadRetryCount.value++;
+
+  // 如果图片确实已加载（有时候浏览器会触发错误但图片实际加载成功）
+  if (event.target && event.target.complete && event.target.naturalWidth > 0) {
+    console.log("媒体已成功加载，忽略错误");
+    if (isImage.value) {
+      handleImageLoaded();
+    } else {
+      handleVideoLoaded();
+    }
+    return;
+  }
+
+  // 如果未超过最大重试次数，自动重试
+  if (loadRetryCount.value < maxRetryCount) {
+    console.log(`自动重试加载 (${loadRetryCount.value}/${maxRetryCount})...`);
     setTimeout(() => {
-      imageRef.value.src = currentSrc;
-    }, 100);
-  } else if (!isImage.value && videoRef.value) {
-    const currentSrc = videoRef.value.src;
-    videoRef.value.src = "";
-    setTimeout(() => {
-      videoRef.value.src = currentSrc;
-    }, 100);
+      retryLoading();
+    }, 1000); // 延迟1秒后重试
+  } else {
+    // 超过重试次数，显示错误
+    isLoading.value = false;
+    loadError.value = `无法加载文件: ${currentImage.value?.name || '未知文件'} (已重试${loadRetryCount.value}次)`;
   }
 };
+
+// 重试加载媒体
+const retryLoading = () => {
+  isLoading.value = true;
+  loadError.value = null;
+
+  // 短暂延迟后重新设置媒体元素的src
+  setTimeout(() => {
+    if (isImage.value) {
+      imageReady.value = false;
+      if (imageRef.value) {
+        const currentSrc = currentImage.value.url;
+        imageRef.value.src = "";
+        setTimeout(() => {
+          if (imageRef.value) {
+            imageRef.value.src = `${currentSrc}?t=${Date.now()}`; // 添加时间戳防止缓存
+          }
+        }, 100);
+      }
+    } else {
+      videoReady.value = false;
+      if (videoRef.value) {
+        const currentSrc = currentImage.value.url;
+        videoRef.value.src = "";
+        setTimeout(() => {
+          if (videoRef.value) {
+            videoRef.value.src = `${currentSrc}?t=${Date.now()}`; // 添加时间戳防止缓存
+          }
+        }, 100);
+      }
+    }
+  }, 300);
+};
+
+// 监视当前图片变化，重置媒体状态
+watch(currentImage, () => {
+  // 重置媒体加载状态
+  isLoading.value = true;
+  imageReady.value = false;
+  videoReady.value = false;
+  loadError.value = null;
+  loadRetryCount.value = 0;
+
+  // 延迟一点时间再加载新的媒体，确保DOM已更新
+  setTimeout(() => {
+    if (isImage.value) {
+      // 预加载图片以检查是否可访问
+      const preloadImg = new Image();
+      preloadImg.onload = () => {
+        imageReady.value = true;
+        isLoading.value = false;
+      };
+      preloadImg.onerror = () => {
+        // 预加载失败，显示错误
+        handleMediaError({ target: preloadImg });
+      };
+      preloadImg.src = currentImage.value.url;
+    } else {
+      // 视频会在video元素加载时自动处理
+      videoReady.value = true;
+    }
+  }, 100);
+}, { immediate: true });
 
 // 切换全屏时根据媒体类型选择合适的元素
 const toggleFullscreen = () => {
@@ -420,52 +544,66 @@ const handleMouseWheel = (e) => {
 
 // 删除图片
 const deleteImage = async () => {
-  const confirmed = await toastStore.confirm("确定要删除这张图片吗？", {
-    title: "删除确认",
-    type: "warning",
-  });
+  try {
+    const confirmed = await toastStore.confirm("确定要删除这张图片吗？", {
+      title: "删除确认",
+      type: "warning",
+    });
 
-  if (confirmed) {
-    const imageId = currentImage.value.id;
-
-    // 检查图片是否在收藏中
-    const isImageFavorited = favoriteStore.isFavorite(imageId);
-
-    // 直接调用删除方法，该方法内部已实现乐观更新
-    const result = await galleryStore.deleteImage(imageId);
-
-    if (result) {
-      // 如果图片在收藏中，也从收藏中删除
-      if (isImageFavorited) {
-        await favoriteStore.removeFavorite(imageId);
-        // 刷新收藏列表
-        await favoriteStore.fetchFavorites();
+    if (confirmed) {
+      // 确保当前图片存在
+      if (!currentImage.value || !currentImage.value.id) {
+        toastStore.error("无法删除：当前图片信息不完整");
+        return;
       }
 
-      // 触发图片删除事件，通知其他组件（特别是收藏页面）刷新数据
-      window.dispatchEvent(
-        new CustomEvent("image-deleted", {
-          detail: { imageId },
-        })
-      );
+      const imageId = currentImage.value.id;
 
-      // 在UI上处理删除后的状态
-      if (images.value.length === 0) {
-        // 如果没有图片了，返回相册
-        goBack();
-      } else if (currentIndex.value >= images.value.length) {
-        // 如果当前索引超出范围，显示最后一张
-        currentIndex.value = images.value.length - 1;
-        updateRoute();
+      // 检查图片是否在收藏中
+      const isImageFavorited = favoriteStore.isFavorite(imageId);
+
+      // 直接调用删除方法，该方法内部已实现乐观更新
+      const result = await galleryStore.deleteImage(imageId);
+
+      if (result) {
+        // 如果图片在收藏中，也从收藏中删除
+        if (isImageFavorited) {
+          await favoriteStore.removeFavorite(imageId);
+          // 刷新收藏列表
+          await favoriteStore.fetchFavorites();
+        }
+
+        // 触发图片删除事件，通知其他组件（特别是收藏页面）刷新数据
+        window.dispatchEvent(
+          new CustomEvent("image-deleted", {
+            detail: { imageId },
+          })
+        );
+
+        // 在UI上处理删除后的状态
+        if (images.value.length === 0) {
+          // 如果没有图片了，返回相册
+          goBack();
+        } else if (currentIndex.value >= images.value.length) {
+          // 如果当前索引超出范围，显示最后一张
+          currentIndex.value = images.value.length - 1;
+          updateRoute();
+        } else {
+          // 确保路由更新
+          updateRoute();
+        }
+
+        toastStore.success("图片已删除");
+
+        // 在后台静默刷新数据
+        setTimeout(() => {
+          galleryStore.fetchImagesInBackground();
+        }, 1000);
       }
-
-      toastStore.success("图片已删除");
-
-      // 在后台静默刷新数据
-      setTimeout(() => {
-        galleryStore.fetchImagesInBackground();
-      }, 1000);
     }
+  } catch (error) {
+    console.error("删除图片出错:", error);
+    toastStore.error("删除图片失败，请重试");
   }
 };
 
@@ -553,6 +691,21 @@ const videoViewMode = ref('contain');
 const toggleVideoViewMode = () => {
   videoViewMode.value = videoViewMode.value === 'cover' ? 'contain' : 'cover';
 };
+
+// 处理页面可见性变化
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'visible' && galleryStore.images.length === 0) {
+    // 页面变为可见且没有图片数据时，重新加载数据
+    galleryStore.fetchImages().then(() => {
+      findAndSetCurrentImageIndex();
+    });
+  }
+};
+
+// 组件卸载时清理事件监听
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+});
 </script>
 
 <style scoped>

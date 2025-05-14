@@ -150,4 +150,7 @@ export function isElementInViewport(element, offset = 0) {
     rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) + offset &&
     rect.right <= (window.innerWidth || document.documentElement.clientWidth) + offset
   );
-} 
+}
+
+// 从draggable.js导入拖拽函数
+export { makeDraggable } from './draggable'; 

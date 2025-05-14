@@ -4,8 +4,9 @@
     <div class="absolute inset-0 bg-black/50" @click="isEditing ? null : cancel"></div>
 
     <!-- 对话框 -->
-    <div class="relative w-full max-w-md rounded-lg bg-card p-6 shadow-lg z-[10000]">
-      <h2 class="mb-4 text-xl font-semibold flex justify-between items-center">
+    <div ref="dialogRef" class="relative w-full max-w-md rounded-lg bg-card p-6 shadow-lg z-[10000]">
+      <!-- 标题栏作为拖拽手柄 -->
+      <h2 ref="dialogHeaderRef" class="mb-4 text-xl font-semibold flex justify-between items-center draggable-handle">
         <span>个人信息</span>
         <button v-if="!isEditing" @click="startEditing" class="text-sm font-normal flex items-center text-primary">
           <PencilIcon class="h-4 w-4 mr-1" />
@@ -130,13 +131,14 @@
 
 <script setup>
 import { UserIcon, PencilIcon, ArrowUpTrayIcon } from '@heroicons/vue/24/outline';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useAuthStore } from '../stores/authStore';
 import { useGalleryStore } from '../stores/galleryStore';
 import { useFavoriteStore } from '../stores/favoriteStore';
 import { useToastStore } from '../stores/toastStore';
 import { updateUserInfo } from '../api/user';
 import { uploadImage } from '../api/images';
+import { makeDraggable } from '../utils';
 
 const props = defineProps({
   modelValue: {
@@ -150,6 +152,84 @@ const authStore = useAuthStore();
 const galleryStore = useGalleryStore();
 const favoriteStore = useFavoriteStore();
 const toastStore = useToastStore();
+
+// DOM引用
+const dialogRef = ref(null);
+const dialogHeaderRef = ref(null);
+
+// 拖拽控制
+let draggableInstance = null;
+
+// 销毁拖拽功能
+const destroyDraggable = () => {
+  if (draggableInstance) {
+    draggableInstance.destroy();
+    draggableInstance = null;
+  }
+};
+
+// 居中对话框
+const centerDialog = () => {
+  if (dialogRef.value) {
+    const dialog = dialogRef.value;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const dialogWidth = dialog.offsetWidth;
+    const dialogHeight = dialog.offsetHeight;
+
+    // 计算居中位置
+    const left = Math.max(0, (windowWidth - dialogWidth) / 2);
+    const top = Math.max(0, (windowHeight - dialogHeight) / 2);
+
+    // 设置对话框位置
+    dialog.style.position = 'absolute';
+    dialog.style.left = `${left}px`;
+    dialog.style.top = `${top}px`;
+    dialog.style.margin = '0';
+    dialog.style.transform = 'none';
+  }
+};
+
+// 初始化拖拽功能
+const initDraggable = () => {
+  if (dialogRef.value && dialogHeaderRef.value) {
+    // 对话框首次打开时居中显示
+    centerDialog();
+
+    // 使用makeDraggable函数使对话框可拖拽
+    draggableInstance = makeDraggable(dialogRef.value, dialogHeaderRef.value, {
+      constrainToWindow: true,
+      marginX: 10,
+      marginY: 10,
+      onDragStart: () => {
+        // 开始拖拽时添加样式
+        dialogHeaderRef.value.classList.add('dragging');
+      },
+      onDragEnd: () => {
+        // 结束拖拽时移除样式
+        dialogHeaderRef.value.classList.remove('dragging');
+      }
+    });
+  }
+};
+
+// 在对话框显示时初始化拖拽
+watch(() => props.modelValue, (newVal) => {
+  if (newVal) {
+    // 对话框显示时，初始化拖拽功能
+    nextTick(() => {
+      initDraggable();
+    });
+  } else {
+    // 对话框关闭时，清理拖拽功能
+    destroyDraggable();
+  }
+}, { immediate: true });
+
+// 组件卸载时清理
+onUnmounted(() => {
+  destroyDraggable();
+});
 
 const user = computed(() => authStore.user);
 
@@ -362,4 +442,15 @@ const logout = async () => {
 
 // 初始化统计数据
 initStats();
-</script> 
+</script>
+
+<style scoped>
+.draggable-handle {
+  cursor: grab;
+  user-select: none;
+}
+
+.draggable-handle.dragging {
+  cursor: grabbing;
+}
+</style> 
