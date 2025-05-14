@@ -115,7 +115,14 @@ const isInFavoritesPage = computed(() => {
 
 // 图片是否被选中
 const selected = computed(() => {
-  return galleryStore.isSelected(props.image.id);
+  // 根据当前页面选择正确的store来检查选中状态
+  if (isInFavoritesPage.value) {
+    // 在收藏页面使用favoriteStore的选中状态
+    return favoriteStore.isSelected(props.image.imageId);
+  } else {
+    // 在相册页面使用galleryStore的选中状态
+    return galleryStore.isSelected(props.image.id);
+  }
 });
 
 // 收藏状态缓存
@@ -215,7 +222,13 @@ const handleTouchEnd = (e) => {
 };
 
 const toggleSelect = () => {
-  galleryStore.toggleSelect(props.image.id);
+  if (isInFavoritesPage.value) {
+    // 在收藏页面切换favoriteStore的选中状态
+    favoriteStore.toggleSelect(props.image.imageId);
+  } else {
+    // 在相册页面切换galleryStore的选中状态
+    galleryStore.toggleSelect(props.image.id);
+  }
 };
 
 const openPreview = () => {

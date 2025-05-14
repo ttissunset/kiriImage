@@ -94,9 +94,9 @@
     </div>
 
     <!-- 内容区域 -->
-    <div class="p-4 pt-6 md:px-6 lg:px-8">
+    <div class="p-4 pt-6 md:px-6 lg:px-8" ref="scrollContainer">
       <!-- 加载状态 -->
-      <div v-if="favoriteStore.isLoading" class="flex justify-center py-12">
+      <div v-if="favoriteStore.isLoading && !favoriteStore.isLoadingMore" class="flex justify-center py-12">
         <div class="h-12 w-12 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
       </div>
 
@@ -132,8 +132,18 @@
           </div>
         </div>
 
+        <!-- 加载更多指示器 -->
+        <div v-if="favoriteStore.isLoadingMore" class="flex justify-center py-6">
+          <div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+        </div>
+
+        <!-- 加载完成提示 -->
+        <div v-if="!favoriteStore.hasMore && favoriteStore.favorites.length > 0" class="py-4 text-center text-sm text-muted-foreground">
+          已加载全部收藏
+        </div>
+
         <!-- 底部信息栏 -->
-        <div class="mt-10 border-t pt-4 text-center text-sm text-muted-foreground">
+        <div class="mt-4 border-t pt-4 text-center text-sm text-muted-foreground">
           <p>{{ favoriteStore.total }} 张收藏</p>
           <p>最后更新于 {{ formatUpdateTime(new Date()) }}</p>
         </div>
@@ -146,7 +156,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, onBeforeUnmount } from "vue";
+import { ref, onMounted, computed, watch, onBeforeUnmount, nextTick } from "vue";
 import { useFavoriteStore } from "../stores/favoriteStore";
 import Button from "../components/ui/Button.vue";
 import ImageCard from "../components/ImageCard.vue";
@@ -164,6 +174,7 @@ import { useRouter } from "vue-router";
 import Slider from "../components/ui/Slider.vue";
 import { useAppStore } from "../stores/appStore";
 import { useGalleryStore } from "../stores/galleryStore";
+import { throttle, debounce } from "../utils/performance";
 
 const favoriteStore = useFavoriteStore();
 const router = useRouter();
@@ -172,6 +183,8 @@ const galleryStore = useGalleryStore();
 
 const showBatchRemoveDialog = ref(false);
 const gridSize = ref(5); // 默认每行显示5个图片
+const scrollContainer = ref(null);
+const isScrollListenerActive = ref(true);
 
 // 移动端菜单控制
 const showMobileMenu = ref(false);
@@ -190,16 +203,35 @@ const gridStyle = computed(() => {
   };
 });
 
-// 监听路由变化，在页面切换时清除选中状态
-watch(() => router.currentRoute.value.name, (newRouteName, oldRouteName) => {
-  // 当从其他页面进入favorites页面时，清除gallery的选中状态
-  if (newRouteName === 'favorites' && oldRouteName === 'gallery') {
-    galleryStore.clearSelection();
+// 监听滚动事件，实现无限滚动
+const handleScroll = throttle(() => {
+  if (!isScrollListenerActive.value || !favoriteStore.hasMore || favoriteStore.isLoadingMore) {
+    return;
   }
 
-  // 当离开favorites页面时，清除favorites的选中状态
-  if (oldRouteName === 'favorites' && newRouteName !== 'favorites') {
+  const scrollTop = window.scrollY || document.documentElement.scrollTop;
+  const windowHeight = window.innerHeight;
+  const documentHeight = document.documentElement.scrollHeight;
+
+  // 当滚动到距离底部300px时，加载更多
+  if (documentHeight - scrollTop - windowHeight < 300) {
+    loadMoreFavorites();
+  }
+}, 200);
+
+// 加载更多收藏
+const loadMoreFavorites = async () => {
+  if (favoriteStore.hasMore && !favoriteStore.isLoadingMore) {
+    await favoriteStore.loadMoreFavorites();
+  }
+};
+
+// 监听路由变化，实现更可靠的状态重置
+watch(() => router.currentRoute.value.name, (newRouteName) => {
+  // 当进入favorites页面时，清除gallery的选中状态并重置当前页面状态
+  if (newRouteName === 'favorites') {
     favoriteStore.clearSelection();
+    galleryStore.clearSelection();
   }
 });
 
@@ -207,8 +239,12 @@ watch(() => router.currentRoute.value.name, (newRouteName, oldRouteName) => {
 onMounted(() => {
   favoriteStore.fetchFavorites();
 
-  // 进入页面时重置相册页面的选中状态
+  // 添加滚动事件监听
+  window.addEventListener('scroll', handleScroll);
+
+  // 进入页面时重置相册页面的选中状态和当前页面状态
   galleryStore.clearSelection();
+  favoriteStore.clearSelection();
 });
 
 // 监听路由变化，当进入收藏页面时重新获取数据
@@ -228,6 +264,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('image-deleted', refreshOnRouteEnter);
+  window.removeEventListener('scroll', handleScroll);
 
   // 离开收藏页面时清除收藏选中状态
   favoriteStore.clearSelection();
@@ -245,6 +282,9 @@ const openBatchRemoveDialog = () => {
 
 // 处理批量取消收藏
 const handleBatchRemove = async () => {
+  // 暂停滚动监听，防止操作过程中触发
+  isScrollListenerActive.value = false;
+
   const result = await favoriteStore.batchRemoveFavorites();
 
   // 无论成功与否，都关闭对话框
@@ -255,6 +295,11 @@ const handleBatchRemove = async () => {
     // 重新获取最新的收藏列表
     await favoriteStore.fetchFavorites();
   }
+
+  // 恢复滚动监听
+  nextTick(() => {
+    isScrollListenerActive.value = true;
+  });
 };
 
 // 格式化更新时间

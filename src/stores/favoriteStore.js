@@ -2,15 +2,18 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { getFavorites, addToFavorites, removeFromFavorites, batchRemoveFromFavorites, checkFavoriteStatus } from '../api/favorites'
 
+// 创建独立的收藏选中状态存储
 export const useFavoriteStore = defineStore('favorite', () => {
   // 状态
   const favorites = ref([])
-  const selectedIds = ref(new Set())
+  const selectedIds = ref(new Set()) // 收藏选中ID集合，仅在favorites视图中使用
   const isLoading = ref(false)
+  const isLoadingMore = ref(false) // 加载更多状态
   const error = ref(null)
   const currentPage = ref(1)
   const limit = ref(50)
   const total = ref(0)
+  const hasMore = ref(true) // 是否有更多数据
 
   // 计算属性
   const hasSelected = computed(() => selectedIds.value.size > 0)
@@ -23,6 +26,10 @@ export const useFavoriteStore = defineStore('favorite', () => {
   const fetchFavorites = async () => {
     isLoading.value = true
     error.value = null
+    // 重置分页
+    currentPage.value = 1
+    // 清除选中状态，避免与之前的选择冲突
+    clearSelection()
 
     try {
       const params = {
@@ -35,6 +42,8 @@ export const useFavoriteStore = defineStore('favorite', () => {
       if (response.code === 200) {
         favorites.value = response.data.items
         total.value = response.data.total
+        // 更新是否有更多数据
+        hasMore.value = favorites.value.length < total.value
       } else {
         error.value = response.message || '获取收藏列表失败'
       }
@@ -43,6 +52,45 @@ export const useFavoriteStore = defineStore('favorite', () => {
       console.error('获取收藏列表失败:', err)
     } finally {
       isLoading.value = false
+    }
+  }
+
+  // 加载更多收藏
+  const loadMoreFavorites = async () => {
+    // 如果没有更多数据或已经在加载中，则不执行
+    if (!hasMore.value || isLoadingMore.value) return
+
+    isLoadingMore.value = true
+
+    try {
+      // 页码加1
+      const nextPage = currentPage.value + 1
+
+      const params = {
+        page: nextPage,
+        limit: limit.value
+      }
+
+      const response = await getFavorites(params)
+
+      if (response.code === 200) {
+        // 追加数据而不是替换
+        favorites.value = [...favorites.value, ...response.data.items]
+        total.value = response.data.total
+
+        // 更新当前页码
+        currentPage.value = nextPage
+
+        // 更新是否有更多数据
+        hasMore.value = favorites.value.length < total.value
+      } else {
+        error.value = response.message || '加载更多收藏失败'
+      }
+    } catch (err) {
+      error.value = '加载更多收藏失败: ' + (err.message || '未知错误')
+      console.error('加载更多收藏失败:', err)
+    } finally {
+      isLoadingMore.value = false
     }
   }
 
@@ -91,6 +139,9 @@ export const useFavoriteStore = defineStore('favorite', () => {
         // 导入消息提示存储
         const { useToastStore } = await import('../stores/toastStore')
         const toastStore = useToastStore()
+
+        // 显示成功消息
+        toastStore.success('已从收藏中移除')
 
         return true
       } else {
@@ -184,6 +235,7 @@ export const useFavoriteStore = defineStore('favorite', () => {
   }
 
   const clearSelection = () => {
+    // 完全清除选中状态
     selectedIds.value.clear()
   }
 
@@ -198,10 +250,12 @@ export const useFavoriteStore = defineStore('favorite', () => {
     favorites,
     selectedIds,
     isLoading,
+    isLoadingMore,
     error,
     currentPage,
     limit,
     total,
+    hasMore,
 
     // 计算属性
     hasSelected,
@@ -210,6 +264,7 @@ export const useFavoriteStore = defineStore('favorite', () => {
 
     // 方法
     fetchFavorites,
+    loadMoreFavorites,
     addFavorite,
     removeFavorite,
     batchRemoveFavorites,

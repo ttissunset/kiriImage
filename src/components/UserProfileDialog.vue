@@ -257,19 +257,25 @@ const stats = ref({
 const initStats = async () => {
   // 从galleryStore获取准确的图片数量
   await galleryStore.fetchImages();
-  stats.value.uploadCount = galleryStore.images.length || 0;
+  stats.value.uploadCount = galleryStore.total || 0;
 
   // 从favoriteStore获取准确的收藏数量
   await favoriteStore.fetchFavorites();
-  stats.value.favoriteCount = favoriteStore.favorites?.length || 0;
+  stats.value.favoriteCount = favoriteStore.total || 0;
 
-  // 存储空间使用量现在直接从用户数据的storage对象中获取
+  // 存储空间使用量从用户数据的storage对象中获取
+  if (user.value && user.value.storage) {
+    stats.value.storageUsed = user.value.storage.used || 0;
+    stats.value.storageLimit = user.value.storage.limit || stats.value.storageLimit;
+  }
 };
 
 // 监听用户信息变化，更新编辑表单
 watch(() => user.value, (newUser) => {
   if (newUser) {
     editNickname.value = newUser.nickname || newUser.username || '';
+    // 当用户信息更新时，也更新统计数据
+    initStats();
   }
 }, { immediate: true });
 

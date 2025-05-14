@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed top-0 right-0 z-50 p-4 flex flex-col-reverse items-end gap-3 max-h-screen overflow-hidden">
+  <div class="fixed top-10 right-0 z-50 p-4 flex flex-col-reverse items-end gap-3 max-h-screen overflow-hidden">
     <Toast v-for="toast in toasts" :key="toast.id" :toast="toast" @close="removeToast" @confirm="handleConfirm" @cancel="handleCancel" />
   </div>
 </template>

@@ -105,9 +105,9 @@
     </div>
 
     <!-- 内容区域-->
-    <div class="p-4 pt-6 md:px-6 lg:px-8">
+    <div class="p-4 pt-6 md:px-6 lg:px-8" ref="scrollContainer">
       <!-- 加载状态 -->
-      <div v-if="galleryStore.isLoading" class="flex justify-center py-12">
+      <div v-if="galleryStore.isLoading && !galleryStore.isLoadingMore" class="flex justify-center py-12">
         <div class="h-12 w-12 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
       </div>
 
@@ -131,9 +131,19 @@
           </div>
         </div>
 
+        <!-- 加载更多指示器 -->
+        <div v-if="galleryStore.isLoadingMore" class="flex justify-center py-6">
+          <div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+        </div>
+
+        <!-- 加载完成提示 -->
+        <div v-if="!galleryStore.hasMore && galleryStore.images.length > 0" class="py-4 text-center text-sm text-muted-foreground">
+          已加载全部图片
+        </div>
+
         <!-- 底部信息栏 - iCloud风格 -->
-        <div class="mt-10 border-t pt-4 text-center text-sm text-muted-foreground">
-          <p>{{ galleryStore.images.length }} 张照片</p>
+        <div class="mt-4 border-t pt-4 text-center text-sm text-muted-foreground">
+          <p>{{ galleryStore.total }} 张照片</p>
           <p>最后更新于 {{ formatUpdateTime(new Date()) }}</p>
         </div>
       </div>
@@ -151,7 +161,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onUnmounted, watch } from "vue";
+import { ref, onMounted, computed, onUnmounted, watch, nextTick } from "vue";
 import { useGalleryStore } from "../stores/galleryStore";
 import { useAppStore } from "../stores/appStore";
 import Button from "../components/ui/Button.vue";
@@ -186,6 +196,8 @@ const showDeleteDialog = ref(false);
 const showDeleteMultipleDialog = ref(false);
 const selectedImage = ref(null);
 const gridSize = ref(5); // 默认每行显示5个图片
+const scrollContainer = ref(null);
+const isScrollListenerActive = ref(true);
 
 // 通过gridSize计算网格样式
 const gridStyle = computed(() => {
@@ -213,16 +225,38 @@ const handleWindowResize = debounce(() => {
   }
 }, 200);
 
-// 监听路由变化，在页面切换时清除选中状态
-watch(() => route.name, (newRouteName, oldRouteName) => {
-  // 当从其他页面进入gallery页面时，清除收藏页面的选中状态
-  if (newRouteName === 'gallery' && oldRouteName === 'favorites') {
-    favoriteStore.clearSelection();
+// 监听滚动事件，实现无限滚动
+const handleScroll = throttle(() => {
+  if (!isScrollListenerActive.value || !galleryStore.hasMore || galleryStore.isLoadingMore) {
+    return;
   }
 
-  // 当离开gallery页面时，清除gallery的选中状态
-  if (oldRouteName === 'gallery' && newRouteName !== 'gallery') {
+  const container = scrollContainer.value;
+  if (!container) return;
+
+  const scrollTop = window.scrollY || document.documentElement.scrollTop;
+  const windowHeight = window.innerHeight;
+  const documentHeight = document.documentElement.scrollHeight;
+
+  // 当滚动到距离底部300px时，加载更多
+  if (documentHeight - scrollTop - windowHeight < 300) {
+    loadMoreImages();
+  }
+}, 200);
+
+// 加载更多图片
+const loadMoreImages = async () => {
+  if (galleryStore.hasMore && !galleryStore.isLoadingMore) {
+    await galleryStore.loadMoreImages();
+  }
+};
+
+// 监听路由变化，实现更可靠的状态重置
+watch(() => route.name, (newRouteName) => {
+  // 当进入gallery页面时，清除收藏页面的选中状态并重置当前页面状态
+  if (newRouteName === 'gallery') {
     galleryStore.clearSelection();
+    favoriteStore.clearSelection();
   }
 });
 
@@ -236,13 +270,18 @@ onMounted(() => {
   // 添加窗口大小调整事件监听
   window.addEventListener('resize', handleWindowResize);
 
-  // 进入页面时重置收藏页面的选中状态
+  // 添加滚动事件监听
+  window.addEventListener('scroll', handleScroll);
+
+  // 进入页面时重置收藏页面的选中状态和当前页面状态
   favoriteStore.clearSelection();
+  galleryStore.clearSelection();
 });
 
 // 组件卸载时清除事件监听
 onUnmounted(() => {
   window.removeEventListener('resize', handleWindowResize);
+  window.removeEventListener('scroll', handleScroll);
 
   // 离开页面时重置当前页面的选中状态
   galleryStore.clearSelection();
@@ -267,8 +306,16 @@ const openDeleteMultipleDialog = () => {
 
 // 处理重命名
 const handleRename = async ({ id, name }) => {
+  // 暂停滚动监听，防止操作过程中触发
+  isScrollListenerActive.value = false;
+
   // 直接调用更新方法，该方法内部已实现乐观更新
   const result = await galleryStore.updateImageName(id, name);
+
+  // 恢复滚动监听
+  nextTick(() => {
+    isScrollListenerActive.value = true;
+  });
 
   // 在后台静默刷新数据
   if (result) {
@@ -281,8 +328,16 @@ const handleRename = async ({ id, name }) => {
 // 处理删除
 const handleDelete = async () => {
   if (selectedImage.value) {
+    // 暂停滚动监听，防止操作过程中触发
+    isScrollListenerActive.value = false;
+
     // 直接调用删除方法
     const result = await galleryStore.deleteImage(selectedImage.value.id);
+
+    // 恢复滚动监听
+    nextTick(() => {
+      isScrollListenerActive.value = true;
+    });
 
     // 在后台静默刷新数据
     if (result) {
@@ -295,8 +350,16 @@ const handleDelete = async () => {
 
 // 处理批量删除
 const handleDeleteMultiple = async () => {
+  // 暂停滚动监听，防止操作过程中触发
+  isScrollListenerActive.value = false;
+
   // 直接调用批量删除方法
   const result = await galleryStore.deleteSelectedImages();
+
+  // 恢复滚动监听
+  nextTick(() => {
+    isScrollListenerActive.value = true;
+  });
 
   // 在后台静默刷新数据
   if (result) {
@@ -309,6 +372,9 @@ const handleDeleteMultiple = async () => {
 // 批量添加到收藏
 const batchAddToFavorites = async () => {
   if (!galleryStore.hasSelected) return;
+
+  // 暂停滚动监听，防止操作过程中触发
+  isScrollListenerActive.value = false;
 
   try {
     // 获取所有选中图片的ID
@@ -359,6 +425,11 @@ const batchAddToFavorites = async () => {
     console.error('批量添加收藏失败:', error);
     toastStore.error(error.message || '请稍后重试', {
       title: '添加收藏失败'
+    });
+  } finally {
+    // 恢复滚动监听
+    nextTick(() => {
+      isScrollListenerActive.value = true;
     });
   }
 };
