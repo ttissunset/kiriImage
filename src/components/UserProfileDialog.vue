@@ -96,7 +96,7 @@
             </div>
             <div class="flex justify-between">
               <span class="text-sm text-muted-foreground">存储空间</span>
-              <span class="text-sm">{{ user?.storage?.totalHuman || '0 B' }} / {{ formatStorage(stats.storageLimit) }}</span>
+              <span class="text-sm">{{ formatStorage(stats.storageUsed) }} / {{ formatStorage(stats.storageLimit) }}</span>
             </div>
           </div>
         </div>
@@ -265,7 +265,9 @@ const initStats = async () => {
 
   // 存储空间使用量从用户数据的storage对象中获取
   if (user.value && user.value.storage) {
+    // 更新获取存储空间的逻辑，使用 used 字段
     stats.value.storageUsed = user.value.storage.used || 0;
+    // 如果 totalHuman 可用，则使用它来显示更友好的格式
     stats.value.storageLimit = user.value.storage.limit || stats.value.storageLimit;
   }
 };
@@ -435,15 +437,20 @@ const cancel = () => {
 
 // 退出登录
 const logout = async () => {
-  const confirmed = await toastStore.confirm('确定要退出登录吗？', {
-    title: '退出确认'
-  });
+  // 关闭个人信息对话框，以便确认弹窗可见
+  emit('update:modelValue', false);
 
-  if (confirmed) {
-    authStore.logout();
-    toastStore.success('已成功退出登录');
-    cancel();
-  }
+  // 显示确认弹窗
+  setTimeout(() => {
+    toastStore.confirm('确定要退出登录吗？', {
+      title: '退出确认'
+    }).then(confirmed => {
+      if (confirmed) {
+        authStore.logout();
+        toastStore.success('已成功退出登录');
+      }
+    });
+  }, 100); // 短暂延迟，确保个人信息对话框已完全关闭
 };
 
 // 初始化统计数据
