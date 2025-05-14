@@ -5,6 +5,7 @@ import ImagePreview from "../components/ImagePreview.vue";
 import UploadView from "../views/UploadView.vue";
 import LoginView from "../views/LoginView.vue";
 import DataDashboardView from "../views/DataDashboardView.vue";
+import RecommendView from "../views/RecommendView.vue";
 import { useAuthStore } from "../stores/authStore";
 
 const routes = [
@@ -31,6 +32,12 @@ const routes = [
     path: "/upload",
     name: "upload",
     component: UploadView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/recommend",
+    name: "recommend",
+    component: RecommendView,
     meta: { requiresAuth: true },
   },
   {

@@ -50,6 +50,16 @@
           上传
         </router-link>
 
+        <!-- 添加推荐路由 -->
+        <router-link to="/recommend" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors" :class="{
+            'text-primary': $route.name === 'recommend',
+            'text-muted-foreground hover:text-primary hover:bg-accent':
+              $route.name !== 'recommend',
+          }" @click="closeMobileMenu">
+          <SparklesIcon class="h-5 w-5" />
+          推荐
+        </router-link>
+
         <!-- 只对特定用户显示数据统计页面 -->
         <router-link v-if="authStore.isAdmin" to="/dashboard" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors" :class="{
             'text-primary': $route.name === 'dashboard',
@@ -102,7 +112,8 @@ import {
   XMarkIcon,
   ArrowUpOnSquareIcon,
   VideoCameraIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  SparklesIcon
 } from "@heroicons/vue/24/outline";
 import { computed, ref } from "vue";
 import { useGalleryStore } from "../stores/galleryStore";
