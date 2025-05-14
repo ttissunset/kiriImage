@@ -29,6 +29,12 @@ watch(() => route.path, (newPath) => {
 const showThemeCustomizer = ref(false)
 const themeButtonRef = ref(null)
 const showMobileMenu = ref(false)
+const isMobileDevice = ref(false)
+
+// 判断是否为移动设备
+const checkIsMobile = () => {
+  isMobileDevice.value = window.innerWidth < 768
+}
 
 const openThemeCustomizer = () => {
   showThemeCustomizer.value = true
@@ -43,6 +49,7 @@ const handleResize = () => {
   if (window.innerWidth >= 768) {
     showMobileMenu.value = false
   }
+  checkIsMobile()
 }
 
 // 添加窗口大小变化监听和自定义事件监听
@@ -50,6 +57,8 @@ onMounted(() => {
   window.addEventListener('resize', handleResize)
   // 添加自定义事件监听，以处理从GalleryView页面触发的菜单切换
   document.addEventListener('toggle-mobile-menu', toggleMobileMenu)
+  // 初始检查设备类型
+  checkIsMobile()
 })
 
 // 组件卸载前移除事件监听
@@ -88,7 +97,7 @@ onBeforeUnmount(() => {
 
       <!-- 主题设置按钮 -->
       <button 
-        v-if="showNavbar"
+        v-if="showNavbar && !isMobileDevice"
         ref="themeButtonRef" 
         class="fixed bottom-20 right-6 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 md:left-6 md:right-auto" 
         @click="openThemeCustomizer" 
@@ -98,7 +107,7 @@ onBeforeUnmount(() => {
       </button>
 
       <!-- 主题自定义器 -->
-      <ThemeCustomizer v-if="showNavbar" v-model="showThemeCustomizer" :trigger-el="themeButtonRef" />
+      <ThemeCustomizer v-if="showNavbar && !isMobileDevice" v-model="showThemeCustomizer" :trigger-el="themeButtonRef" />
 
       <!-- 消息提示容器 -->
       <ToastContainer />

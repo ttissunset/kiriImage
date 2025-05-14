@@ -110,9 +110,9 @@
           @loadeddata="isLoaded = true"
           @error="handleVideoError"
         ></video>
-      </div>
-      
-      <!-- 加载提示 -->
+    </div>
+
+    <!-- 加载提示 -->
       <div
         v-if="!isLoaded"
         class="absolute inset-0 flex items-center justify-center bg-black/50 z-10"
@@ -407,19 +407,19 @@ const downloadImage = async () => {
       // 将canvas内容转换为blob
       canvas.toBlob(
         (blob) => {
-          // 创建下载链接
-          const url = URL.createObjectURL(blob);
+        // 创建下载链接
+        const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
-          a.href = url;
-          a.download = `recommend_image_${new Date().getTime()}.jpg`;
-          document.body.appendChild(a);
-          a.click();
+        a.href = url;
+        a.download = `recommend_image_${new Date().getTime()}.jpg`;
+        document.body.appendChild(a);
+        a.click();
 
-          // 清理
-          setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-          }, 100);
+        // 清理
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 100);
 
           toastStore.success("图片已保存");
         },
@@ -481,4 +481,4 @@ onMounted(async () => {
     padding-right: max(1rem, env(safe-area-inset-right));
   }
 }
-</style>
+</style> 
