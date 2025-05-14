@@ -78,13 +78,24 @@
     </div>
 
     <!-- 图片展示区域 - 占据除头部外的所有空间 -->
-    <div class="flex-1 w-full overflow-hidden">
-      <img
-        :src="imgUrl"
-        class="w-full h-full object-cover"
-        ref="imageRef"
-        @load="isLoaded = true"
-      />
+    <div class="flex-1 w-full h-full relative bg-black overflow-hidden">
+      <!-- 背景模糊层 - 铺满整个区域 -->
+      <div 
+        v-if="imgUrl && isLoaded" 
+        class="absolute inset-0 bg-center bg-no-repeat bg-cover filter blur-md opacity-80 scale-110"
+        :style="{ backgroundImage: `url(${imgUrl})` }"
+      ></div>
+      
+      <!-- 主图片容器 - 居中显示完整图片 -->
+      <div class="absolute inset-0 flex items-center justify-center">
+        <img
+          v-if="imgUrl"
+          :src="imgUrl"
+          class="max-w-full max-h-full object-contain"
+          ref="imageRef"
+          @load="isLoaded = true"
+        />
+      </div>
     </div>
 
     <!-- 加载提示 -->
@@ -136,7 +147,7 @@ const imageRef = ref(null);
 const imageSources = [
   { value: "loli", label: "LoliAPI" },
   { value: "dmoe", label: "demo" },
-  { value: "likepoems", label: "likepoems" },
+  { value: "likepoems", label: "如诗" },
   { value: "pixiv", label: "pixiv" },
 ];
 
