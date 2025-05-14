@@ -77,35 +77,50 @@
       </div>
     </div>
 
-    <!-- 图片展示区域 - 占据除头部外的所有空间 -->
+    <!-- 图片/视频展示区域 - 占据除头部外的所有空间 -->
     <div class="flex-1 w-full h-full relative bg-black overflow-hidden">
       <!-- 背景模糊层 - 铺满整个区域 -->
-      <div 
-        v-if="imgUrl && isLoaded" 
+      <div
+        v-if="imgUrl && isLoaded && !isVideo"
         class="absolute inset-0 bg-center bg-no-repeat bg-cover filter blur-md opacity-80 scale-110"
         :style="{ backgroundImage: `url(${imgUrl})` }"
       ></div>
-      
+
       <!-- 主图片容器 - 居中显示完整图片 -->
       <div class="absolute inset-0 flex items-center justify-center">
+        <!-- 图片显示 -->
         <img
-          v-if="imgUrl"
+          v-if="imgUrl && !isVideo"
           :src="imgUrl"
           class="max-w-full max-h-full object-contain"
           ref="imageRef"
           @load="isLoaded = true"
         />
+        
+        <!-- 视频播放器 -->
+        <video
+          v-if="isVideo && imgUrl"
+          ref="videoRef"
+          :src="imgUrl"
+          class="w-full h-full object-contain"
+          autoplay
+          loop
+          muted
+          controls
+          @loadeddata="isLoaded = true"
+          @error="handleVideoError"
+        ></video>
       </div>
-    </div>
-
-    <!-- 加载提示 -->
-    <div
-      v-if="!isLoaded"
-      class="absolute inset-0 flex items-center justify-center bg-background/50"
-    >
+      
+      <!-- 加载提示 -->
       <div
-        class="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary"
-      ></div>
+        v-if="!isLoaded"
+        class="absolute inset-0 flex items-center justify-center bg-black/50 z-10"
+      >
+        <div
+          class="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary"
+        ></div>
+      </div>
     </div>
 
     <!-- 收藏进度提示 -->
@@ -142,6 +157,8 @@ const isLoaded = ref(false);
 const isSaving = ref(false);
 const savingMessage = ref("");
 const imageRef = ref(null);
+const videoRef = ref(null);
+const isVideo = ref(false); // 标记当前内容是否是视频
 
 // 图片源配置
 const imageSources = [
@@ -149,6 +166,8 @@ const imageSources = [
   { value: "dmoe", label: "demo" },
   { value: "likepoems", label: "如诗" },
   { value: "pixiv", label: "pixiv" },
+  { value: "alcy", label: "alcy" },
+  { value: "acg", label: "acg" },
 ];
 
 // 当前选择的图片源
@@ -157,8 +176,15 @@ const selectedSource = ref("loli");
 // 根据图片源获取不同的URL
 const getImageUrlBySource = async (source) => {
   isLoaded.value = false;
+  isVideo.value = false; // 默认重置为图片模式
+  
   try {
     let url = "";
+    // 添加时间戳和随机数，确保每次请求都是唯一的
+    const timestamp = Date.now();
+    const randomNum = Math.floor(Math.random() * 10000);
+    const cacheBuster = `?t=${timestamp}&r=${randomNum}`;
+    
     switch (source) {
       case "loli":
         const loliRes = await axios({
@@ -170,18 +196,29 @@ const getImageUrlBySource = async (source) => {
         break;
 
       case "dmoe":
-        url = `https://www.dmoe.cc/random.php?t=${Date.now()}`;
+        url = `https://www.dmoe.cc/random.php${cacheBuster}`;
         break;
 
       case "如诗":
-        url = `https://img.likepoems.com/images/pc`;
+        url = `https://img.likepoems.com/images/pc${cacheBuster}`;
         break;
         // Unsplash随机图片
-        url = `https://source.unsplash.com/random?t=${Date.now()}`;
+        url = `https://source.unsplash.com/random${cacheBuster}`;
         break;
 
       case "pixiv":
-        url = `https://api.likepoems.com/img/pixiv/`;
+        url = `https://api.likepoems.com/img/pixiv/${cacheBuster}`;
+        break;
+
+      case "alcy":
+        // 添加随机参数避免缓存
+        url = `https://t.alcy.cc/ycy${cacheBuster}`;
+        break;
+
+      case "acg":
+        // 添加随机参数避免缓存
+        url = `https://t.alcy.cc/acg${cacheBuster}`;
+        isVideo.value = true; // 标记为视频模式
         break;
 
       default:
@@ -195,7 +232,20 @@ const getImageUrlBySource = async (source) => {
     }
 
     imgUrl.value = url;
+    
+    // 如果30秒后仍未加载完成，强制重置加载状态
+    const loadingTimeout = setTimeout(() => {
+      if (!isLoaded.value) {
+        isLoaded.value = true;
+        toastStore.error("内容加载超时，请重试");
+        console.warn("Content loading timeout for source:", source);
+      }
+    }, 30000);
+    
+    // 清理函数
+    return () => clearTimeout(loadingTimeout);
   } catch (error) {
+    isLoaded.value = true; // 出错时也要重置加载状态
     toastStore.error(
       `获取${imageSources.find((s) => s.value === source)?.label || "图片"}失败，请重试`
     );
@@ -222,7 +272,7 @@ const addToFavorite = async () => {
 
   try {
     savingMessage.value = "上传图片中...";
-    
+
     // 获取图片扩展名
     let extension = "jpg"; // 默认jpg格式
     const urlParts = imgUrl.value.split("?")[0].split(".");
@@ -240,45 +290,49 @@ const addToFavorite = async () => {
     const fileName = `${source}_${timestamp}_${random}.${extension}`;
 
     let blob;
-    
+
     try {
       // 直接fetch可能会有跨域问题，我们尝试使用canvas方法
       savingMessage.value = "处理图片中...";
-      
+
       // 创建一个隐藏的图片元素
       const img = new Image();
       img.crossOrigin = "anonymous";
-      
+
       // 使用Promise等待图片加载
       await new Promise((resolve, reject) => {
         img.onload = resolve;
         img.onerror = reject;
-        
+
         // 为URL添加时间戳避免缓存
         const cacheBuster = imgUrl.value.includes("?") ? "&t=" : "?t=";
         img.src = imgUrl.value + cacheBuster + Date.now();
       });
-      
+
       // 创建canvas并将图片绘制到canvas
       const canvas = document.createElement("canvas");
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0);
-      
+
       // 将canvas转换为blob
-      blob = await new Promise(resolve => {
-        canvas.toBlob(resolve, `image/${extension === "jpg" ? "jpeg" : extension}`, 0.95);
+      blob = await new Promise((resolve) => {
+        canvas.toBlob(
+          resolve,
+          `image/${extension === "jpg" ? "jpeg" : extension}`,
+          0.95
+        );
       });
     } catch (canvasError) {
       console.warn("Canvas方法获取图片失败，尝试直接fetch:", canvasError);
-      
+
       // 如果canvas方法失败，尝试直接fetch
       savingMessage.value = "尝试直接获取图片...";
       try {
         const response = await fetch(imgUrl.value, {
           headers: {
-            "Origin": window.location.origin,
+            Origin: window.location.origin,
           },
           mode: "cors",
         });
@@ -288,7 +342,7 @@ const addToFavorite = async () => {
         throw new Error("无法获取图片内容，可能是由于跨域限制");
       }
     }
-    
+
     if (!blob) {
       throw new Error("无法获取图片内容");
     }
@@ -402,9 +456,20 @@ const toggleMobileMenu = () => {
   document.dispatchEvent(new CustomEvent("toggle-mobile-menu"));
 };
 
+// 视频错误处理
+const handleVideoError = () => {
+  isLoaded.value = true;
+  toastStore.error("视频加载失败，请重试");
+};
+
 // 页面加载时获取图片URL
 onMounted(async () => {
   await getImgUrl();
+  // const alcyRes = await axios({
+  //   method: "get",
+  //   url: "https://t.alcy.cc/ycy?json",
+  // });
+  // console.log(alcyRes);
 });
 </script>
 
