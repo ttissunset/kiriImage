@@ -1,41 +1,43 @@
 <template>
   <div class="image-preview-container h-full flex flex-col relative">
     <!-- 顶部工具栏 -->
-    <div class="flex items-center justify-between p-3 border-b">
+    <div class="flex items-center border-b p-3 relative">
       <!-- 左侧返回按钮和全屏按钮 -->
-      <div class="flex items-center space-x-3">
-        <button @click="goBack" class="flex items-center text-muted-foreground hover:text-foreground">
-          <ChevronLeftIcon class="w-5 h-5 mr-1" />
+      <div class="flex items-center space-x-3 z-10">
+        <button @click="goBack" class="flex items-center text-muted-foreground hover:text-foreground p-1">
+          <ChevronLeftIcon class="w-5 h-5 sm:w-5 sm:h-5" />
         </button>
         <button @click="toggleFullscreen" class="hidden sm:flex items-center text-muted-foreground hover:text-foreground">
           <ArrowsPointingOutIcon class="w-5 h-5" />
         </button>
       </div>
 
-      <!-- 中间日期时间 -->
-      <div class="text-sm text-muted-foreground">
-        <div class="hidden sm:block">{{ formattedDateTime }}</div>
-        <div class="text-xs text-center">
-          {{ currentIndex + 1 }} / {{ totalImages }}
+      <!-- 中间日期时间 - 使用绝对定位实现真正居中 -->
+      <div class="absolute left-0 right-0 top-0 bottom-0 flex items-center justify-center pointer-events-none">
+        <div class="text-sm text-muted-foreground text-center">
+          <div class="hidden sm:block">{{ formattedDateTime }}</div>
+          <div class="text-xs">
+            {{ currentIndex + 1 }} / {{ totalImages }}
+          </div>
         </div>
       </div>
 
       <!-- 右侧工具按钮 -->
-      <div class="flex space-x-2 sm:space-x-4">
+      <div class="flex space-x-1 sm:space-x-4 ml-auto z-10">
         <button title="信息" class="hidden sm:block text-muted-foreground hover:text-foreground">
           <InformationCircleIcon class="w-5 h-5" />
         </button>
-        <button title="收藏" class="text-muted-foreground hover:text-foreground p-1" :class="{ 'text-primary': isFavorite }" @click="toggleFavorite">
-          <HeartIcon class="w-5 h-5" />
+        <button title="收藏" class="text-muted-foreground hover:text-foreground p-1 pointer-events-auto" :class="{ 'text-primary': isFavorite }" @click="toggleFavorite">
+          <HeartIcon class="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
-        <button title="下载" class="text-muted-foreground hover:text-foreground p-1" @click="downloadImage">
-          <ArrowDownTrayIcon class="w-5 h-5" />
+        <button title="下载" class="text-muted-foreground hover:text-foreground p-1 pointer-events-auto" @click="downloadImage">
+          <ArrowDownTrayIcon class="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
         <button title="分享" class="hidden sm:block text-muted-foreground hover:text-foreground">
           <ShareIcon class="w-5 h-5" />
         </button>
-        <button title="删除" class="text-muted-foreground hover:text-destructive p-1" @click="deleteImage">
-          <TrashIcon class="w-5 h-5" />
+        <button title="删除" class="text-muted-foreground hover:text-destructive p-1 pointer-events-auto" @click="deleteImage">
+          <TrashIcon class="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       </div>
     </div>
@@ -58,10 +60,10 @@
         </div>
 
         <!-- 图片预览 -->
-        <img v-else-if="isImage && imageReady && currentImage.url" ref="imageRef" :src="currentImage.url" :alt="currentImage.name" class="max-h-full max-w-full object-contain" @click.stop @load="handleImageLoaded" @error="handleMediaError" />
+        <img v-if="!isLoading && isImage && currentImage.url" ref="imageRef" :src="currentImage.url" :alt="currentImage.name" class="max-h-full max-w-full object-contain" @click.stop @load="handleImageLoaded" @error="handleMediaError" />
 
         <!-- 视频预览 -->
-        <div v-else-if="!isImage && videoReady && currentImage.url" class="relative w-full h-full flex items-center justify-center">
+        <div v-else-if="!isLoading && !isImage && currentImage.url" class="relative w-full h-full flex items-center justify-center">
           <video ref="videoRef" :src="currentImage.url" controls :class="[
               'w-full', 
               videoViewMode === 'cover' ? 'object-cover h-full' : 'object-contain h-auto'
@@ -90,13 +92,6 @@
       <button v-if="currentIndex < totalImages - 1" @click.stop="nextImage" class="absolute right-4 bg-background/80 rounded-full p-2 text-muted-foreground hover:text-foreground sm:opacity-50 sm:hover:opacity-100 z-10">
         <ChevronRightIcon class="w-6 h-6" />
       </button>
-
-      <!-- 移动端删除按钮 - 固定在底部方便点击 -->
-      <div v-if="isMobile" class="absolute bottom-4 right-4 z-20">
-        <button @click="deleteImage" class="bg-destructive/90 text-destructive-foreground rounded-full p-3 shadow-lg">
-          <TrashIcon class="w-5 h-5" />
-        </button>
-      </div>
     </div>
 
     <!-- 底部缩略图列表 - 所有设备都显示 -->
@@ -355,7 +350,6 @@ const maxRetryCount = 3;
 // 图片加载完成处理函数
 const handleImageLoaded = () => {
   console.log('图片加载成功');
-  imageReady.value = true;
   isLoading.value = false;
   loadError.value = null;
   loadRetryCount.value = 0; // 重置重试计数
@@ -364,7 +358,6 @@ const handleImageLoaded = () => {
 // 视频加载完成处理函数
 const handleVideoLoaded = () => {
   console.log('视频加载成功');
-  videoReady.value = true;
   isLoading.value = false;
   loadError.value = null;
   loadRetryCount.value = 0; // 重置重试计数
@@ -377,14 +370,12 @@ const handleMediaError = (event) => {
   // 增加重试计数
   loadRetryCount.value++;
 
-  // 如果图片确实已加载（有时候浏览器会触发错误但图片实际加载成功）
+  // 特别处理: 图片可能已加载但触发了错误事件
+  // 有些情况下浏览器会报错但图片实际加载成功
   if (event.target && event.target.complete && event.target.naturalWidth > 0) {
     console.log("媒体已成功加载，忽略错误");
-    if (isImage.value) {
-      handleImageLoaded();
-    } else {
-      handleVideoLoaded();
-    }
+    isLoading.value = false;
+    loadError.value = null;
     return;
   }
 
@@ -408,28 +399,22 @@ const retryLoading = () => {
 
   // 短暂延迟后重新设置媒体元素的src
   setTimeout(() => {
-    if (isImage.value) {
-      imageReady.value = false;
-      if (imageRef.value) {
-        const currentSrc = currentImage.value.url;
-        imageRef.value.src = "";
-        setTimeout(() => {
-          if (imageRef.value) {
-            imageRef.value.src = `${currentSrc}?t=${Date.now()}`; // 添加时间戳防止缓存
-          }
-        }, 100);
-      }
-    } else {
-      videoReady.value = false;
-      if (videoRef.value) {
-        const currentSrc = currentImage.value.url;
-        videoRef.value.src = "";
-        setTimeout(() => {
-          if (videoRef.value) {
-            videoRef.value.src = `${currentSrc}?t=${Date.now()}`; // 添加时间戳防止缓存
-          }
-        }, 100);
-      }
+    if (isImage.value && imageRef.value) {
+      const currentSrc = currentImage.value.url;
+      imageRef.value.src = "";
+      setTimeout(() => {
+        if (imageRef.value) {
+          imageRef.value.src = `${currentSrc}?t=${Date.now()}`; // 添加时间戳防止缓存
+        }
+      }, 100);
+    } else if (!isImage.value && videoRef.value) {
+      const currentSrc = currentImage.value.url;
+      videoRef.value.src = "";
+      setTimeout(() => {
+        if (videoRef.value) {
+          videoRef.value.src = `${currentSrc}?t=${Date.now()}`; // 添加时间戳防止缓存
+        }
+      }, 100);
     }
   }, 300);
 };
@@ -438,30 +423,32 @@ const retryLoading = () => {
 watch(currentImage, () => {
   // 重置媒体加载状态
   isLoading.value = true;
-  imageReady.value = false;
-  videoReady.value = false;
   loadError.value = null;
   loadRetryCount.value = 0;
 
-  // 延迟一点时间再加载新的媒体，确保DOM已更新
-  setTimeout(() => {
-    if (isImage.value) {
-      // 预加载图片以检查是否可访问
-      const preloadImg = new Image();
-      preloadImg.onload = () => {
-        imageReady.value = true;
+  // 立即尝试加载
+  if (currentImage.value && currentImage.value.url) {
+    const img = new Image();
+
+    img.onload = () => {
+      // 预加载成功，更新状态
+      isLoading.value = false;
+    };
+
+    img.onerror = () => {
+      // 如果预加载失败但图片仍然加载了部分内容(有naturalWidth)，我们仍然显示
+      if (img.naturalWidth > 0) {
         isLoading.value = false;
-      };
-      preloadImg.onerror = () => {
-        // 预加载失败，显示错误
-        handleMediaError({ target: preloadImg });
-      };
-      preloadImg.src = currentImage.value.url;
-    } else {
-      // 视频会在video元素加载时自动处理
-      videoReady.value = true;
-    }
-  }, 100);
+        return;
+      }
+
+      // 真正的加载失败，调用错误处理
+      handleMediaError({ target: img });
+    };
+
+    // 开始加载图片，添加时间戳避免缓存问题
+    img.src = `${currentImage.value.url}?t=${Date.now()}`;
+  }
 }, { immediate: true });
 
 // 切换全屏时根据媒体类型选择合适的元素
