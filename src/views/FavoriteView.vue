@@ -1,175 +1,92 @@
 <template>
   <div class="relative h-full">
     <!-- 页面标题和工具栏 -->
-    <div
-      class="sticky top-0 z-10 bg-background px-4 py-2 md:px-6 lg:px-8 border-b shadow-sm"
-    >
+    <div class="sticky top-0 z-10 bg-background px-4 py-2 md:px-6 lg:px-8 border-b shadow-sm">
       <!-- 桌面端控制区 -->
       <div class="hidden md:flex flex-wrap items-center justify-between gap-2">
         <div class="flex flex-wrap items-center gap-2">
           <!-- 网格布局滑块控制器 -->
           <div class="flex items-center gap-2 mr-3">
-            <Slider
-              v-model="gridSize"
-              :min="4"
-              :max="8"
-              :step="1"
-              width="8rem"
-            />
+            <Slider v-model="gridSize" :min="4" :max="8" :step="1" width="8rem" />
           </div>
 
           <!-- 图片显示模式切换按钮 -->
-          <Button
-            variant="outline"
-            size="icon"
-            @click="appStore.toggleDisplayMode"
-            :title="
+          <Button variant="outline" size="icon" @click="appStore.toggleDisplayMode" :title="
               appStore.imageDisplayMode === 'fill'
                 ? '切换到原始比例'
                 : '切换到填充模式'
-            "
-            class="h-8 w-8 mr-1"
-          >
-            <ViewColumnsIcon
-              v-if="appStore.imageDisplayMode === 'fill'"
-              class="h-4 w-4"
-            />
+            " class="h-8 w-8 mr-1">
+            <ViewColumnsIcon v-if="appStore.imageDisplayMode === 'fill'" class="h-4 w-4" />
             <Squares2X2Icon v-else class="h-4 w-4" />
           </Button>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <!-- 选择计数和操作按钮 -->
           <transition name="fade-slide" mode="out-in">
-            <div
-              v-if="favoriteStore.hasSelected"
-              class="flex items-center gap-2"
-              key="selection-controls-desktop"
-            >
-              <span class="text-sm text-muted-foreground"
-                >已选择 {{ favoriteStore.selectedCount }} 项</span
-              >
+            <div v-if="favoriteStore.hasSelected" class="flex items-center gap-2" key="selection-controls-desktop">
+              <span class="text-sm text-muted-foreground">已选择 {{ favoriteStore.selectedCount }} 项</span>
               <!-- 操作图标按钮区 -->
               <div class="flex items-center">
                 <!-- 取消收藏按钮 -->
-                <Button
-                  variant="outline"
-                  size="icon"
-                  class="h-8 w-8 mr-1"
-                  @click="openBatchRemoveDialog"
-                  title="取消收藏"
-                >
+                <Button variant="outline" size="icon" class="h-8 w-8 mr-1" @click="openBatchRemoveDialog" title="取消收藏">
                   <HeartIcon class="h-4 w-4 text-destructive" />
                 </Button>
 
                 <!-- 取消选择按钮 -->
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  class="h-8 w-8 ml-1"
-                  @click="favoriteStore.clearSelection"
-                  title="取消选择"
-                >
+                <Button variant="ghost" size="icon" class="h-8 w-8 ml-1" @click="favoriteStore.clearSelection" title="取消选择">
                   <XMarkIcon class="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
             <!-- 全选按钮 -->
-            <Button
-              v-else-if="
+            <Button v-else-if="
                 !favoriteStore.hasSelected && favoriteStore.favorites.length > 0
-              "
-              variant="outline"
-              size="icon"
-              @click="favoriteStore.selectAll"
-              title="全选"
-              class="h-8 w-8"
-              key="select-all-desktop"
-            >
+              " variant="outline" size="icon" @click="favoriteStore.selectAll" title="全选" class="h-8 w-8" key="select-all-desktop">
               <CheckCircleIcon class="h-4 w-4" />
             </Button>
           </transition>
         </div>
       </div>
-      
+
       <!-- 移动端操作栏 -->
       <div class="flex items-center justify-between">
         <h5 class="text-lg font-semibold text-card-foreground sm:text-xl">
           我的收藏
         </h5>
-        
+
         <!-- 移动端操作按钮组 -->
         <div class="flex items-center">
           <!-- 选择计数和操作按钮 -->
           <transition name="fade-slide" mode="out-in">
-            <div
-              v-if="favoriteStore.hasSelected"
-              class="flex items-center md:hidden"
-              key="selection-controls-mobile"
-            >
-              <span class="text-xs text-muted-foreground mr-2"
-                >{{ favoriteStore.selectedCount }}项</span
-              >
-              
+            <div v-if="favoriteStore.hasSelected" class="flex items-center md:hidden" key="selection-controls-mobile">
+              <span class="text-xs text-muted-foreground mr-2">{{ favoriteStore.selectedCount }}项</span>
+
               <!-- 取消收藏按钮 -->
-              <Button
-                variant="ghost"
-                size="icon"
-                class="h-8 w-8"
-                @click="openBatchRemoveDialog"
-                title="取消收藏"
-              >
+              <Button variant="ghost" size="icon" class="h-8 w-8" @click="openBatchRemoveDialog" title="取消收藏">
                 <HeartIcon class="h-4 w-4 text-destructive" />
               </Button>
 
               <!-- 取消选择按钮 -->
-              <Button
-                variant="ghost"
-                size="icon"
-                class="h-8 w-8"
-                @click="favoriteStore.clearSelection"
-                title="取消选择"
-              >
+              <Button variant="ghost" size="icon" class="h-8 w-8" @click="favoriteStore.clearSelection" title="取消选择">
                 <XMarkIcon class="h-4 w-4" />
               </Button>
             </div>
 
             <!-- 常规操作按钮 -->
-            <div 
-              v-else 
-              class="flex items-center md:hidden"
-              key="standard-controls-mobile"
-            >
-              <Button
-                variant="ghost"
-                size="icon"
-                class="h-8 w-8"
-                @click="appStore.toggleDisplayMode"
-                title="显示模式"
-              >
+            <div v-else class="flex items-center md:hidden" key="standard-controls-mobile">
+              <Button variant="ghost" size="icon" class="h-8 w-8" @click="appStore.toggleDisplayMode" title="显示模式">
                 <Squares2X2Icon class="h-4 w-4" />
               </Button>
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                class="h-8 w-8"
-                @click="favoriteStore.selectAll"
-                title="全选"
-              >
+
+              <Button variant="ghost" size="icon" class="h-8 w-8" @click="favoriteStore.selectAll" title="全选">
                 <CheckCircleIcon class="h-4 w-4" />
               </Button>
             </div>
           </transition>
-          
+
           <!-- 菜单按钮 -->
-          <Button
-            variant="ghost"
-            size="icon"
-            class="h-8 w-8 ml-1 md:hidden"
-            @click="toggleMobileMenu" 
-            title="菜单"
-          >
+          <Button variant="ghost" size="icon" class="h-8 w-8 ml-1 md:hidden" @click="toggleMobileMenu" title="菜单">
             <Bars3Icon class="h-4 w-4" />
           </Button>
         </div>
@@ -180,33 +97,18 @@
     <div class="p-4 pt-6 md:px-6 lg:px-8">
       <!-- 加载状态 -->
       <div v-if="favoriteStore.isLoading" class="flex justify-center py-12">
-        <div
-          class="h-12 w-12 animate-spin rounded-full border-4 border-muted border-t-primary"
-        ></div>
+        <div class="h-12 w-12 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
       </div>
 
       <!-- 错误状态 -->
-      <div
-        v-else-if="favoriteStore.error"
-        class="rounded-lg bg-destructive/10 p-4 text-center text-destructive"
-      >
+      <div v-else-if="favoriteStore.error" class="rounded-lg bg-destructive/10 p-4 text-center text-destructive">
         {{ favoriteStore.error }}
-        <Button
-          variant="outline"
-          class="mt-2"
-          @click="favoriteStore.fetchFavorites"
-          >重试</Button
-        >
+        <Button variant="outline" class="mt-2" @click="favoriteStore.fetchFavorites">重试</Button>
       </div>
 
       <!-- 空状态 -->
-      <div
-        v-else-if="favoriteStore.favorites.length === 0"
-        class="py-12 flex flex-col items-center justify-center space-y-4"
-      >
-        <div
-          class="h-20 w-20 rounded-full bg-muted flex items-center justify-center text-muted-foreground"
-        >
+      <div v-else-if="favoriteStore.favorites.length === 0" class="py-12 flex flex-col items-center justify-center space-y-4">
+        <div class="h-20 w-20 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
           <HeartIcon class="h-10 w-10" />
         </div>
         <div class="text-center space-y-2">
@@ -225,22 +127,13 @@
       <div v-else>
         <!-- 收藏网格 -->
         <div class="grid-gallery" :style="gridStyle">
-          <div
-            v-for="favorite in favoriteStore.favorites"
-            :key="favorite.id"
-            class="grid-item"
-          >
-            <ImageCard
-              :image="favorite.image"
-              @click="toggleSelect(favorite.imageId)"
-            />
-      </div>
-    </div>
+          <div v-for="favorite in favoriteStore.favorites" :key="favorite.id" class="grid-item">
+            <ImageCard :image="favorite.image" @click="toggleSelect(favorite.imageId)" />
+          </div>
+        </div>
 
         <!-- 底部信息栏 -->
-        <div
-          class="mt-10 border-t pt-4 text-center text-sm text-muted-foreground"
-        >
+        <div class="mt-10 border-t pt-4 text-center text-sm text-muted-foreground">
           <p>{{ favoriteStore.total }} 张收藏</p>
           <p>最后更新于 {{ formatUpdateTime(new Date()) }}</p>
         </div>
@@ -249,15 +142,7 @@
   </div>
 
   <!-- 批量取消收藏对话框 -->
-  <DeleteConfirmDialog
-    v-model="showBatchRemoveDialog"
-    :multiple="true"
-    :count="favoriteStore.selectedCount"
-    confirm-text="取消收藏"
-    title="取消收藏"
-    message="确定要取消收藏这些图片吗？"
-    @confirm="handleBatchRemove"
-  />
+  <DeleteConfirmDialog v-model="showBatchRemoveDialog" :multiple="true" :count="favoriteStore.selectedCount" confirm-text="取消收藏" title="取消收藏" message="确定要取消收藏这些图片吗？" @confirm="handleBatchRemove" />
 </template>
 
 <script setup>
@@ -278,10 +163,12 @@ import {
 import { useRouter } from "vue-router";
 import Slider from "../components/ui/Slider.vue";
 import { useAppStore } from "../stores/appStore";
+import { useGalleryStore } from "../stores/galleryStore";
 
 const favoriteStore = useFavoriteStore();
 const router = useRouter();
 const appStore = useAppStore();
+const galleryStore = useGalleryStore();
 
 const showBatchRemoveDialog = ref(false);
 const gridSize = ref(5); // 默认每行显示5个图片
@@ -303,9 +190,25 @@ const gridStyle = computed(() => {
   };
 });
 
+// 监听路由变化，在页面切换时清除选中状态
+watch(() => router.currentRoute.value.name, (newRouteName, oldRouteName) => {
+  // 当从其他页面进入favorites页面时，清除gallery的选中状态
+  if (newRouteName === 'favorites' && oldRouteName === 'gallery') {
+    galleryStore.clearSelection();
+  }
+
+  // 当离开favorites页面时，清除favorites的选中状态
+  if (oldRouteName === 'favorites' && newRouteName !== 'favorites') {
+    favoriteStore.clearSelection();
+  }
+});
+
 // 加载收藏
 onMounted(() => {
   favoriteStore.fetchFavorites();
+
+  // 进入页面时重置相册页面的选中状态
+  galleryStore.clearSelection();
 });
 
 // 监听路由变化，当进入收藏页面时重新获取数据
@@ -325,6 +228,9 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('image-deleted', refreshOnRouteEnter);
+
+  // 离开收藏页面时清除收藏选中状态
+  favoriteStore.clearSelection();
 });
 
 // 切换选择
@@ -411,9 +317,7 @@ const goToGallery = () => {
 /* 添加过渡动画效果 */
 .fade-slide-enter-active,
 .fade-slide-leave-active {
-  transition:
-    opacity 0.3s,
-    transform 0.3s;
+  transition: opacity 0.3s, transform 0.3s;
 }
 
 .fade-slide-enter-from {

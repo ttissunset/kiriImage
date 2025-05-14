@@ -151,7 +151,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onUnmounted } from "vue";
+import { ref, onMounted, computed, onUnmounted, watch } from "vue";
 import { useGalleryStore } from "../stores/galleryStore";
 import { useAppStore } from "../stores/appStore";
 import Button from "../components/ui/Button.vue";
@@ -172,11 +172,14 @@ import { useToastStore } from "../stores/toastStore";
 import { useFavoriteStore } from "../stores/favoriteStore";
 import { batchAddToFavorites as apiBatchAddToFavorites } from "../api/favorites";
 import { throttle, debounce } from "../utils/performance";
+import { useRouter, useRoute } from "vue-router";
 
 const galleryStore = useGalleryStore();
 const appStore = useAppStore();
 const toastStore = useToastStore();
 const favoriteStore = useFavoriteStore();
+const router = useRouter();
+const route = useRoute();
 
 const showRenameDialog = ref(false);
 const showDeleteDialog = ref(false);
@@ -210,6 +213,19 @@ const handleWindowResize = debounce(() => {
   }
 }, 200);
 
+// 监听路由变化，在页面切换时清除选中状态
+watch(() => route.name, (newRouteName, oldRouteName) => {
+  // 当从其他页面进入gallery页面时，清除收藏页面的选中状态
+  if (newRouteName === 'gallery' && oldRouteName === 'favorites') {
+    favoriteStore.clearSelection();
+  }
+
+  // 当离开gallery页面时，清除gallery的选中状态
+  if (oldRouteName === 'gallery' && newRouteName !== 'gallery') {
+    galleryStore.clearSelection();
+  }
+});
+
 // 监听窗口大小变化
 onMounted(() => {
   galleryStore.fetchImages();
@@ -220,10 +236,16 @@ onMounted(() => {
   // 添加窗口大小调整事件监听
   window.addEventListener('resize', handleWindowResize);
 
-  // 组件卸载时清除事件监听
-  onUnmounted(() => {
-    window.removeEventListener('resize', handleWindowResize);
-  });
+  // 进入页面时重置收藏页面的选中状态
+  favoriteStore.clearSelection();
+});
+
+// 组件卸载时清除事件监听
+onUnmounted(() => {
+  window.removeEventListener('resize', handleWindowResize);
+
+  // 离开页面时重置当前页面的选中状态
+  galleryStore.clearSelection();
 });
 
 // 打开重命名对话框
