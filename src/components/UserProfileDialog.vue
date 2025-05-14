@@ -45,7 +45,7 @@
           <UserIcon v-else class="h-8 w-8 text-muted-foreground" />
 
           <!-- 上传按钮覆盖在头像上 -->
-          <div v-if="!isUploading" class="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer" @click="$refs.avatarInput.click()">
+          <div v-if="!isUploading" class="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer" @click="openAvatarOptions">
             <ArrowUpTrayIcon class="h-6 w-6 text-white" />
           </div>
         </div>
@@ -127,10 +127,113 @@
       </div>
     </div>
   </div>
+
+  <!-- 添加头像选择对话框 -->
+  <div v-if="showAvatarOptions" class="fixed inset-0 z-[10001] flex items-center justify-center">
+    <div class="absolute inset-0 bg-black/50" @click="showAvatarOptions = false"></div>
+    <div class="relative w-full max-w-sm rounded-lg bg-card p-4 shadow-lg">
+      <h3 class="text-lg font-medium mb-4">选择头像</h3>
+      <div class="grid grid-cols-2 gap-4">
+        <button 
+          @click="$refs.avatarInput.click(); showAvatarOptions = false"
+          class="flex flex-col items-center justify-center rounded-md border p-4 hover:bg-muted transition-colors"
+        >
+          <ArrowUpTrayIcon class="h-8 w-8 mb-2 text-primary" />
+          <span class="text-sm">从本地上传</span>
+        </button>
+        <button 
+          @click="showGalleryPicker = true; showAvatarOptions = false"
+          class="flex flex-col items-center justify-center rounded-md border p-4 hover:bg-muted transition-colors"
+        >
+          <PhotoIcon class="h-8 w-8 mb-2 text-primary" />
+          <span class="text-sm">从相册选择</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 相册图片选择对话框 -->
+  <div v-if="showGalleryPicker" class="fixed inset-0 z-[10001] flex items-center justify-center">
+    <div class="absolute inset-0 bg-black/50" @click="showGalleryPicker = false"></div>
+    <div class="relative w-full max-w-4xl h-[70vh] rounded-lg bg-card p-4 shadow-lg flex flex-col">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-medium">从相册选择头像</h3>
+        <button @click="showGalleryPicker = false" class="text-muted-foreground hover:text-foreground">
+          <XMarkIcon class="h-5 w-5" />
+        </button>
+      </div>
+      
+      <div v-if="isLoading" class="flex-1 flex items-center justify-center">
+        <div class="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+      
+      <div v-else-if="filteredGalleryImages.length === 0" class="flex-1 flex items-center justify-center text-muted-foreground">
+        相册中没有可用的图片
+      </div>
+      
+      <div v-else class="flex-1 overflow-y-auto p-2">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          <div 
+            v-for="image in filteredGalleryImages" 
+            :key="image.id" 
+            class="aspect-square rounded-md overflow-hidden cursor-pointer border border-muted hover:ring-2 hover:ring-primary relative"
+            @click="previewImage(image)"
+          >
+            <img :src="image.thumbUrl || image.url" :alt="image.name" class="h-full w-full object-cover" />
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-4 flex justify-end">
+        <button @click="showGalleryPicker = false" class="rounded-md bg-muted px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/80">
+          取消
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 图片预览弹窗 -->
+  <div v-if="showImagePreview" class="fixed inset-0 z-[10002] flex items-center justify-center">
+    <div class="absolute inset-0 bg-black/70" @click="showImagePreview = false"></div>
+    <div class="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
+      <!-- 关闭按钮 -->
+      <button 
+        @click="showImagePreview = false" 
+        class="absolute top-2 right-2 z-10 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
+      >
+        <XMarkIcon class="h-6 w-6" />
+      </button>
+      
+      <!-- 图片 -->
+      <div class="relative overflow-hidden rounded-lg">
+        <img 
+          :src="previewingImage?.url" 
+          :alt="previewingImage?.name" 
+          class="max-h-[80vh] max-w-full object-contain"
+        />
+      </div>
+      
+      <!-- 操作按钮 -->
+      <div class="mt-4 flex space-x-3">
+        <button 
+          @click="selectImageAsAvatar(previewingImage); showImagePreview = false" 
+          class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          选择为头像
+        </button>
+        <button 
+          @click="showImagePreview = false" 
+          class="rounded-md bg-muted px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/80"
+        >
+          取消
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { UserIcon, PencilIcon, ArrowUpTrayIcon } from '@heroicons/vue/24/outline';
+import { UserIcon, PencilIcon, ArrowUpTrayIcon, XMarkIcon, PhotoIcon } from '@heroicons/vue/24/outline';
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useAuthStore } from '../stores/authStore';
 import { useGalleryStore } from '../stores/galleryStore';
@@ -291,41 +394,84 @@ const startEditing = () => {
   avatarFile.value = null;
 };
 
-// 取消编辑
-const cancelEditing = () => {
-  isEditing.value = false;
-  avatarPreview.value = '';
+// 头像选择相关
+const showAvatarOptions = ref(false);
+const showGalleryPicker = ref(false);
+const galleryImages = ref([]);
+const isLoading = ref(false);
+
+// 图片预览相关
+const showImagePreview = ref(false);
+const previewingImage = ref(null);
+
+// 打开头像选择选项
+const openAvatarOptions = () => {
+  showAvatarOptions.value = true;
+};
+
+// 计算属性：过滤后的相册图片（只包含图片文件，不包含视频）
+const filteredGalleryImages = computed(() => {
+  return galleryImages.value.filter(image => {
+    // 检查是否为图片类型（通过文件名后缀或MIME类型）
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+    const isImage = image.type?.startsWith('image/') || 
+                   imageExtensions.some(ext => 
+                     (image.name || '').toLowerCase().endsWith(ext) || 
+                     (image.url || '').toLowerCase().endsWith(ext)
+                   );
+    
+    return isImage;
+  });
+});
+
+// 从相册加载图片
+const loadGalleryImages = async () => {
+  isLoading.value = true;
+  try {
+    // 确保相册图片已加载
+    if (galleryStore.images.length === 0) {
+      await galleryStore.fetchImages();
+    }
+    galleryImages.value = galleryStore.images;
+  } catch (error) {
+    console.error('加载相册图片失败:', error);
+    toastStore.error('加载相册图片失败');
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// 监听相册选择器显示状态
+watch(() => showGalleryPicker.value, (newVal) => {
+  if (newVal) {
+    loadGalleryImages();
+  }
+});
+
+// 预览图片
+const previewImage = (image) => {
+  previewingImage.value = image;
+  showImagePreview.value = true;
+};
+
+// 选择相册图片作为头像
+const selectImageAsAvatar = (image) => {
+  if (!image) return;
+  
+  // 直接使用图片URL作为头像预览
+  avatarPreview.value = image.url;
+  // 标记这是从相册选择的图片，不需要重新上传
   avatarFile.value = null;
+  // 存储选中图片的URL
+  selectedGalleryImageUrl.value = image.url;
+  // 关闭相册选择器
+  showGalleryPicker.value = false;
 };
 
-// 处理头像上传
-const handleAvatarChange = (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+// 存储从相册选择的图片URL
+const selectedGalleryImageUrl = ref('');
 
-  // 验证文件类型
-  if (!file.type.match('image.*')) {
-    toastStore.error('请上传图片文件');
-    return;
-  }
-
-  // 验证文件大小（限制为5MB）
-  if (file.size > 5 * 1024 * 1024) {
-    toastStore.error('图片大小不能超过5MB');
-    return;
-  }
-
-  avatarFile.value = file;
-
-  // 创建预览
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    avatarPreview.value = e.target.result;
-  };
-  reader.readAsDataURL(file);
-};
-
-// 保存用户信息
+// 保存用户信息修改，处理从相册选择的头像
 const saveUserInfo = async () => {
   if (isSubmitting.value) return;
 
@@ -333,7 +479,7 @@ const saveUserInfo = async () => {
   let avatarUrl = user.value?.avatar || '';
 
   try {
-    // 如果有新上传的头像，先上传头像获取URL
+    // 如果有新上传的头像文件，先上传头像获取URL
     if (avatarFile.value) {
       // 开始上传
       isUploading.value = true;
@@ -373,6 +519,10 @@ const saveUserInfo = async () => {
       setTimeout(() => {
         isUploading.value = false;
       }, 300); // 短暂延迟，让用户看到100%
+    } 
+    // 如果选择了相册的图片作为头像
+    else if (selectedGalleryImageUrl.value) {
+      avatarUrl = selectedGalleryImageUrl.value;
     }
 
     // 调用更新用户信息API
@@ -382,9 +532,10 @@ const saveUserInfo = async () => {
     });
 
     if (response.code === 200) {
-      // 清除临时预览
+      // 清除临时预览和选择
       avatarPreview.value = '';
       avatarFile.value = null;
+      selectedGalleryImageUrl.value = '';
 
       // 尝试从服务器获取最新用户信息
       await authStore.fetchUserInfo();
@@ -410,6 +561,41 @@ const saveUserInfo = async () => {
   } finally {
     isSubmitting.value = false;
   }
+};
+
+// 取消编辑时重置所有状态
+const cancelEditing = () => {
+  isEditing.value = false;
+  avatarPreview.value = '';
+  avatarFile.value = null;
+  selectedGalleryImageUrl.value = '';
+};
+
+// 处理头像上传
+const handleAvatarChange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // 验证文件类型
+  if (!file.type.match('image.*')) {
+    toastStore.error('请上传图片文件');
+    return;
+  }
+
+  // 验证文件大小（限制为5MB）
+  if (file.size > 5 * 1024 * 1024) {
+    toastStore.error('图片大小不能超过5MB');
+    return;
+  }
+
+  avatarFile.value = file;
+
+  // 创建预览
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    avatarPreview.value = e.target.result;
+  };
+  reader.readAsDataURL(file);
 };
 
 // 格式化日期

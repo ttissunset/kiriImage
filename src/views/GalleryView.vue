@@ -58,7 +58,7 @@
       <!-- 移动端操作栏 -->
       <div class="flex items-center justify-between">
         <h5 class="text-lg font-semibold text-card-foreground sm:text-xl">
-          最近添加
+          所有图片
         </h5>
 
         <!-- 移动端操作按钮组-->

@@ -4,7 +4,7 @@
     <div class="flex-none z-10 bg-background px-4 py-2 md:px-6 lg:px-8 border-b shadow-sm">
       <div class="flex items-center justify-between">
         <h5 class="text-lg font-semibold text-card-foreground sm:text-xl">
-          每日推荐
+          随机推荐
         </h5>
 
         <div class="flex items-center gap-2">
