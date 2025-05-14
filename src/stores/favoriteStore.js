@@ -21,6 +21,10 @@ export const useFavoriteStore = defineStore('favorite', () => {
   const allSelected = computed(() => {
     return favorites.value.length > 0 && selectedIds.value.size === favorites.value.length
   })
+  // 获取所有选中的收藏对象
+  const selectedFavorites = computed(() => {
+    return favorites.value.filter(fav => selectedIds.value.has(fav.imageId))
+  })
 
   // 获取收藏列表
   const fetchFavorites = async () => {
@@ -140,9 +144,6 @@ export const useFavoriteStore = defineStore('favorite', () => {
         const { useToastStore } = await import('../stores/toastStore')
         const toastStore = useToastStore()
 
-        // 显示成功消息
-        toastStore.success('已从收藏中移除')
-
         return true
       } else {
         error.value = response.message || '删除收藏失败'
@@ -261,6 +262,7 @@ export const useFavoriteStore = defineStore('favorite', () => {
     hasSelected,
     selectedCount,
     allSelected,
+    selectedFavorites,
 
     // 方法
     fetchFavorites,

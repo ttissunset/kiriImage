@@ -24,7 +24,7 @@
           <!-- 选择计数和操作按钮 -->
           <transition name="fade-slide" mode="out-in">
             <div v-if="favoriteStore.hasSelected" class="flex items-center gap-2" key="selection-controls-desktop">
-              <span class="text-sm text-muted-foreground">已选择 {{ favoriteStore.selectedCount }} 项</span>
+              <span class="text-sm text-muted-foreground">已选择 {{ favoriteStore.selectedFavorites.length }} 项</span>
               <!-- 操作图标按钮区 -->
               <div class="flex items-center">
                 <!-- 取消收藏按钮 -->
@@ -60,7 +60,7 @@
           <!-- 选择计数和操作按钮 -->
           <transition name="fade-slide" mode="out-in">
             <div v-if="favoriteStore.hasSelected" class="flex items-center md:hidden" key="selection-controls-mobile">
-              <span class="text-xs text-muted-foreground mr-2">{{ favoriteStore.selectedCount }}项</span>
+              <span class="text-xs text-muted-foreground mr-2">{{ favoriteStore.selectedFavorites.length }}项</span>
 
               <!-- 取消收藏按钮 -->
               <Button variant="ghost" size="icon" class="h-8 w-8" @click="openBatchRemoveDialog" title="取消收藏">
@@ -128,7 +128,11 @@
         <!-- 收藏网格 -->
         <div class="grid-gallery" :style="gridStyle">
           <div v-for="favorite in favoriteStore.favorites" :key="favorite.id" class="grid-item">
-            <ImageCard :image="favorite.image" @click="toggleSelect(favorite.imageId)" />
+            <ImageCard 
+              :image="favorite.image" 
+              :is-selected="favoriteStore.isSelected(favorite.imageId)"
+              @click="toggleSelect(favorite.imageId)" 
+            />
           </div>
         </div>
 
@@ -152,7 +156,15 @@
   </div>
 
   <!-- 批量取消收藏对话框 -->
-  <DeleteConfirmDialog v-model="showBatchRemoveDialog" :multiple="true" :count="favoriteStore.selectedCount" confirm-text="取消收藏" title="取消收藏" message="确定要取消收藏这些图片吗？" @confirm="handleBatchRemove" />
+  <DeleteConfirmDialog 
+    v-model="showBatchRemoveDialog" 
+    :multiple="true" 
+    :count="favoriteStore.selectedFavorites.length" 
+    confirm-text="取消收藏" 
+    title="取消收藏" 
+    message="确定要取消收藏这些图片吗？" 
+    @confirm="handleBatchRemove" 
+  />
 </template>
 
 <script setup>

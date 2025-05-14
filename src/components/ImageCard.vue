@@ -98,6 +98,10 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  isSelected: {
+    type: Boolean,
+    default: null
+  }
 });
 
 const emit = defineEmits(["rename", "delete"]);
@@ -115,6 +119,11 @@ const isInFavoritesPage = computed(() => {
 
 // 图片是否被选中
 const selected = computed(() => {
+  // 如果外部传入了isSelected属性，则优先使用
+  if (props.isSelected !== null) {
+    return props.isSelected;
+  }
+  
   // 根据当前页面选择正确的store来检查选中状态
   if (isInFavoritesPage.value) {
     // 在收藏页面使用favoriteStore的选中状态

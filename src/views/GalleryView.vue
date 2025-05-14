@@ -127,7 +127,12 @@
         <!-- 照片网格 - 统一大小的网格 -->
         <div class="grid-gallery" :style="gridStyle">
           <div v-for="image in galleryStore.images" :key="image.id" class="grid-item">
-            <ImageCard :image="image" @rename="openRenameDialog" @delete="openDeleteDialog" />
+            <ImageCard 
+              :image="image" 
+              :is-selected="galleryStore.isSelected(image.id)"
+              @rename="openRenameDialog" 
+              @delete="openDeleteDialog" 
+            />
           </div>
         </div>
 
