@@ -58,7 +58,7 @@
       <!-- 移动端操作栏 -->
       <div class="flex items-center justify-between">
         <h5 class="text-lg font-semibold text-card-foreground sm:text-xl">
-          所有图片
+          所有图片 <span class="ml-2 text-sm text-muted-foreground" v-if="galleryStore.images.length > 0">共 {{ galleryStore.total }} 张</span>
         </h5>
 
         <!-- 移动端操作按钮组-->
@@ -106,62 +106,38 @@
 
     <!-- 内容区域-->
     <div class="p-4 pt-6 md:px-6 lg:px-8" ref="scrollContainer">
-      <!-- 加载状态 -->
       <div v-if="galleryStore.isLoading && !galleryStore.isLoadingMore" class="flex justify-center py-12">
         <div class="h-12 w-12 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
       </div>
 
-      <!-- 错误状态 -->
       <div v-else-if="galleryStore.error" class="rounded-lg bg-destructive/10 p-4 text-center text-destructive">
         {{ galleryStore.error }}
         <Button variant="outline" class="mt-2" @click="galleryStore.fetchImages">重试</Button>
       </div>
 
-      <!-- 空状态 -->
       <div v-else-if="galleryStore.images.length === 0" class="py-12 text-center">
         <p class="text-lg text-muted-foreground">暂无图片</p>
       </div>
 
       <!-- 图片网格  -->
       <div v-else>
-        <!-- 照片网格 - 统一大小的网格 -->
         <div class="grid-gallery" :style="gridStyle">
           <div v-for="image in galleryStore.images" :key="image.id" class="grid-item">
-            <ImageCard 
-              :image="image" 
-              :is-selected="galleryStore.isSelected(image.id)"
-              @rename="openRenameDialog" 
-              @delete="openDeleteDialog" 
-            />
+            <ImageCard :image="image" :is-selected="galleryStore.isSelected(image.id)" @rename="openRenameDialog" @delete="openDeleteDialog" />
           </div>
         </div>
 
-        <!-- 加载更多指示器 -->
         <div v-if="galleryStore.isLoadingMore" class="flex justify-center py-6">
           <div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
-        </div>
-
-        <!-- 加载完成提示 -->
-        <div v-if="!galleryStore.hasMore && galleryStore.images.length > 0" class="py-4 text-center text-sm text-muted-foreground">
-          已加载全部图片
-        </div>
-
-        <!-- 底部信息栏 - iCloud风格 -->
-        <div class="mt-4 border-t pt-4 text-center text-sm text-muted-foreground">
-          <p>{{ galleryStore.total }} 张照片</p>
-          <p>最后更新于 {{ formatUpdateTime(new Date()) }}</p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- 重命名对话框 -->
   <RenameDialog v-model="showRenameDialog" :image="selectedImage" @rename="handleRename" />
 
-  <!-- 删除对话框 -->
   <DeleteConfirmDialog v-model="showDeleteDialog" :image="selectedImage" @confirm="handleDelete" />
 
-  <!-- 批量删除对话框 -->
   <DeleteConfirmDialog v-model="showDeleteMultipleDialog" :multiple="true" :count="galleryStore.selectedCount" @confirm="handleDeleteMultiple" />
 </template>
 
@@ -200,7 +176,7 @@ const showRenameDialog = ref(false);
 const showDeleteDialog = ref(false);
 const showDeleteMultipleDialog = ref(false);
 const selectedImage = ref(null);
-const gridSize = ref(5); // 默认每行显示5个图片
+const gridSize = ref(5);
 const scrollContainer = ref(null);
 const isScrollListenerActive = ref(true);
 
@@ -223,7 +199,7 @@ const handleWindowResize = debounce(() => {
   const windowWidth = window.innerWidth;
   if (windowWidth < 640) { // 移动设备
     gridSize.value = 3;
-  } else if (windowWidth < 1024) { // 平板设备
+  } else if (windowWidth < 1024) {
     gridSize.value = 4;
   } else { // 桌面设备
     gridSize.value = 5;
@@ -256,9 +232,8 @@ const loadMoreImages = async () => {
   }
 };
 
-// 监听路由变化，实现更可靠的状态重置
 watch(() => route.name, (newRouteName) => {
-  // 当进入gallery页面时，清除收藏页面的选中状态并重置当前页面状态
+  // 当进入gallery页面清除收藏页面的选中状态并重置当前页面状态
   if (newRouteName === 'gallery') {
     galleryStore.clearSelection();
     favoriteStore.clearSelection();

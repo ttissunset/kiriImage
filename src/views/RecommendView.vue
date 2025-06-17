@@ -1,9 +1,7 @@
 <template>
   <div class="flex flex-col h-screen overflow-hidden">
     <!-- 页面标题和工具栏 -->
-    <div
-      class="flex-none z-10 bg-background px-4 py-2 md:px-6 lg:px-8 border-b shadow-sm"
-    >
+    <div class="flex-none z-10 bg-background px-4 py-2 md:px-6 lg:px-8 border-b shadow-sm">
       <div class="flex items-center justify-between">
         <h5 class="text-lg font-semibold text-card-foreground sm:text-xl">
           随机推荐
@@ -12,55 +10,26 @@
         <div class="flex items-center gap-2">
           <!-- 图片源选择下拉框 -->
           <div class="hidden sm:block">
-            <Select
-              v-model="selectedSource"
-              :options="imageSources"
-              @update:modelValue="changeImageSource"
-              class="w-32 text-xs"
-            />
+            <Select v-model="selectedSource" :options="imageSources" @update:modelValue="changeImageSource" class="w-32 text-xs" />
           </div>
 
           <!-- 收藏按钮 -->
-          <Button
-            variant="ghost"
-            size="sm"
-            @click="addToFavorite"
-            class="flex items-center gap-1"
-            :disabled="isSaving"
-          >
-            <HeartIcon
-              class="h-4 w-4"
-              :class="isSaving ? 'animate-pulse' : ''"
-            />
+          <Button variant="ghost" size="sm" @click="addToFavorite" class="flex items-center gap-1" :disabled="isSaving">
+            <HeartIcon class="h-4 w-4" :class="isSaving ? 'animate-pulse' : ''" />
           </Button>
 
           <!-- 下载按钮 -->
-          <Button
-            variant="ghost"
-            size="sm"
-            @click="downloadImage"
-            class="flex items-center gap-1"
-          >
+          <Button variant="ghost" size="sm" @click="downloadImage" class="flex items-center gap-1">
             <ArrowDownTrayIcon class="h-4 w-4" />
           </Button>
 
           <!-- 刷新按钮 -->
-          <Button
-            variant="ghost"
-            size="sm"
-            @click="getImgUrl"
-            class="flex items-center gap-1"
-          >
+          <Button variant="ghost" size="sm" @click="getImgUrl" class="flex items-center gap-1">
             <ArrowPathIcon class="h-4 w-4" />
           </Button>
 
           <!-- 移动端菜单按钮 - 只在移动端显示 -->
-          <Button
-            variant="ghost"
-            size="sm"
-            @click="toggleMobileMenu"
-            class="flex md:hidden items-center gap-1 ml-1"
-          >
+          <Button variant="ghost" size="sm" @click="toggleMobileMenu" class="flex md:hidden items-center gap-1 ml-1">
             <Bars3Icon class="h-4 w-4" />
           </Button>
         </div>
@@ -68,69 +37,33 @@
 
       <!-- 移动端下拉框 -->
       <div class="sm:hidden mt-2">
-        <Select
-          v-model="selectedSource"
-          :options="imageSources"
-          @update:modelValue="changeImageSource"
-          placeholder="选择图片源"
-        />
+        <Select v-model="selectedSource" :options="imageSources" @update:modelValue="changeImageSource" placeholder="选择图片源" />
       </div>
     </div>
 
     <!-- 图片/视频展示区域 - 占据除头部外的所有空间 -->
     <div class="flex-1 w-full h-full relative bg-black overflow-hidden">
       <!-- 背景模糊层 - 铺满整个区域 -->
-      <div
-        v-if="imgUrl && isLoaded && !isVideo"
-        class="absolute inset-0 bg-center bg-no-repeat bg-cover filter blur-md opacity-80 scale-110"
-        :style="{ backgroundImage: `url(${imgUrl})` }"
-      ></div>
+      <div v-if="imgUrl && isLoaded && !isVideo" class="absolute inset-0 bg-center bg-no-repeat bg-cover filter blur-md opacity-80 scale-110" :style="{ backgroundImage: `url(${imgUrl})` }"></div>
 
       <!-- 主图片容器 - 居中显示完整图片 -->
       <div class="absolute inset-0 flex items-center justify-center">
         <!-- 图片显示 -->
-        <img
-          v-if="imgUrl && !isVideo"
-          :src="imgUrl"
-          class="max-w-full max-h-full object-contain"
-          ref="imageRef"
-          @load="isLoaded = true"
-        />
-        
-        <!-- 视频播放器 -->
-        <video
-          v-if="isVideo && imgUrl"
-          ref="videoRef"
-          :src="imgUrl"
-          class="w-full h-full object-contain"
-          autoplay
-          loop
-          muted
-          controls
-          @loadeddata="isLoaded = true"
-          @error="handleVideoError"
-        ></video>
-    </div>
+        <img v-if="imgUrl && !isVideo" :src="imgUrl" class="max-w-full max-h-full object-contain" ref="imageRef" @load="isLoaded = true" />
 
-    <!-- 加载提示 -->
-      <div
-        v-if="!isLoaded"
-        class="absolute inset-0 flex items-center justify-center bg-black/50 z-10"
-      >
-        <div
-          class="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary"
-        ></div>
+        <!-- 视频播放器 -->
+        <video v-if="isVideo && imgUrl" ref="videoRef" :src="imgUrl" class="w-full h-full object-contain" autoplay loop muted controls @loadeddata="isLoaded = true" @error="handleVideoError"></video>
+      </div>
+
+      <!-- 加载提示 -->
+      <div v-if="!isLoaded" class="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+        <div class="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
       </div>
     </div>
 
     <!-- 收藏进度提示 -->
-    <div
-      v-if="isSaving"
-      class="fixed bottom-4 left-0 right-0 mx-auto w-fit bg-background shadow-md rounded-md px-4 py-2 flex items-center gap-2"
-    >
-      <div
-        class="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-primary"
-      ></div>
+    <div v-if="isSaving" class="fixed bottom-4 left-0 right-0 mx-auto w-fit bg-background shadow-md rounded-md px-4 py-2 flex items-center gap-2">
+      <div class="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-primary"></div>
       <span class="text-sm">{{ savingMessage }}</span>
     </div>
   </div>
@@ -177,14 +110,14 @@ const selectedSource = ref("loli");
 const getImageUrlBySource = async (source) => {
   isLoaded.value = false;
   isVideo.value = false; // 默认重置为图片模式
-  
+
   try {
     let url = "";
     // 添加时间戳和随机数，确保每次请求都是唯一的
     const timestamp = Date.now();
     const randomNum = Math.floor(Math.random() * 10000);
     const cacheBuster = `?t=${timestamp}&r=${randomNum}`;
-    
+
     switch (source) {
       case "loli":
         const loliRes = await axios({
@@ -232,7 +165,7 @@ const getImageUrlBySource = async (source) => {
     }
 
     imgUrl.value = url;
-    
+
     // 如果30秒后仍未加载完成，强制重置加载状态
     const loadingTimeout = setTimeout(() => {
       if (!isLoaded.value) {
@@ -241,7 +174,7 @@ const getImageUrlBySource = async (source) => {
         console.warn("Content loading timeout for source:", source);
       }
     }, 30000);
-    
+
     // 清理函数
     return () => clearTimeout(loadingTimeout);
   } catch (error) {
@@ -407,19 +340,19 @@ const downloadImage = async () => {
       // 将canvas内容转换为blob
       canvas.toBlob(
         (blob) => {
-        // 创建下载链接
-        const url = URL.createObjectURL(blob);
+          // 创建下载链接
+          const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
-        a.href = url;
-        a.download = `recommend_image_${new Date().getTime()}.jpg`;
-        document.body.appendChild(a);
-        a.click();
+          a.href = url;
+          a.download = `recommend_image_${new Date().getTime()}.jpg`;
+          document.body.appendChild(a);
+          a.click();
 
-        // 清理
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }, 100);
+          // 清理
+          setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }, 100);
 
           toastStore.success("图片已保存");
         },

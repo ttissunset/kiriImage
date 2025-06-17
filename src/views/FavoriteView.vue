@@ -52,7 +52,7 @@
       <!-- 移动端操作栏 -->
       <div class="flex items-center justify-between">
         <h5 class="text-lg font-semibold text-card-foreground sm:text-xl">
-          我的收藏
+          我的收藏 <span class="ml-2 text-sm text-muted-foreground" v-if="favoriteStore.favorites.length > 0">共 {{ favoriteStore.total }} 张</span>
         </h5>
 
         <!-- 移动端操作按钮组 -->
@@ -125,46 +125,21 @@
 
       <!-- 收藏网格 -->
       <div v-else>
-        <!-- 收藏网格 -->
         <div class="grid-gallery" :style="gridStyle">
           <div v-for="favorite in favoriteStore.favorites" :key="favorite.id" class="grid-item">
-            <ImageCard 
-              :image="favorite.image" 
-              :is-selected="favoriteStore.isSelected(favorite.imageId)"
-              @click="toggleSelect(favorite.imageId)" 
-            />
+            <ImageCard :image="favorite.image" :is-selected="favoriteStore.isSelected(favorite.imageId)" @click="toggleSelect(favorite.imageId)" />
           </div>
         </div>
 
-        <!-- 加载更多指示器 -->
         <div v-if="favoriteStore.isLoadingMore" class="flex justify-center py-6">
           <div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
-        </div>
-
-        <!-- 加载完成提示 -->
-        <div v-if="!favoriteStore.hasMore && favoriteStore.favorites.length > 0" class="py-4 text-center text-sm text-muted-foreground">
-          已加载全部收藏
-        </div>
-
-        <!-- 底部信息栏 -->
-        <div class="mt-4 border-t pt-4 text-center text-sm text-muted-foreground">
-          <p>{{ favoriteStore.total }} 张收藏</p>
-          <p>最后更新于 {{ formatUpdateTime(new Date()) }}</p>
         </div>
       </div>
     </div>
   </div>
 
   <!-- 批量取消收藏对话框 -->
-  <DeleteConfirmDialog 
-    v-model="showBatchRemoveDialog" 
-    :multiple="true" 
-    :count="favoriteStore.selectedFavorites.length" 
-    confirm-text="取消收藏" 
-    title="取消收藏" 
-    message="确定要取消收藏这些图片吗？" 
-    @confirm="handleBatchRemove" 
-  />
+  <DeleteConfirmDialog v-model="showBatchRemoveDialog" :multiple="true" :count="favoriteStore.selectedFavorites.length" confirm-text="取消收藏" title="取消收藏" message="确定要取消收藏这些图片吗？" @confirm="handleBatchRemove" />
 </template>
 
 <script setup>
