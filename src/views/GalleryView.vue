@@ -237,13 +237,12 @@ watch(() => route.name, (newRouteName) => {
   if (newRouteName === 'gallery') {
     galleryStore.clearSelection();
     favoriteStore.clearSelection();
+    galleryStore.fetchImages(); // 只有在gallery页面才调用fetchImages
   }
 });
 
 // 监听窗口大小变化
 onMounted(() => {
-  galleryStore.fetchImages();
-
   // 初始化根据窗口大小设置网格大小
   handleWindowResize();
 

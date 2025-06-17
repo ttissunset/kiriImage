@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getFavorites, addToFavorites, removeFromFavorites, batchRemoveFromFavorites, checkFavoriteStatus } from '../api/favorites'
+import { getFavorites, addToFavorites, removeFromFavorites, batchRemoveFromFavorites } from '../api/favorites'
 
 // 创建独立的收藏选中状态存储
 export const useFavoriteStore = defineStore('favorite', () => {
@@ -203,14 +203,8 @@ export const useFavoriteStore = defineStore('favorite', () => {
   // 检查图片收藏状态（通过API）
   const checkFavorite = async (imageId) => {
     try {
-      const response = await checkFavoriteStatus(imageId)
-
-      if (response.code === 200) {
-        return response.data.isFavorite
-      } else {
-        error.value = response.message || '检查收藏状态失败'
-        return false
-      }
+      //   const response = await checkFavoriteStatus(imageId)
+      return false
     } catch (err) {
       error.value = '检查收藏状态失败: ' + (err.message || '未知错误')
       console.error('检查收藏状态失败:', err)

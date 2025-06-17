@@ -37,8 +37,7 @@ export const useGalleryStore = defineStore('gallery', () => {
     try {
       const params = {
         page: currentPage.value,
-        limit: limit.value,
-        sort: sortBy.value
+        limit: limit.value
       }
 
       const response = await getImages(params)

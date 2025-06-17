@@ -48,13 +48,13 @@
       </div>
 
       <!-- 左下角收藏图标 -->
-      <div v-if="checkFavoriteStatus()" class="absolute bottom-2 left-2">
+      <!-- <div v-if="checkFavoriteStatus()" class="absolute bottom-2 left-2">
         <div class="w-6 h-6 sm:w-6 sm:h-6 max-sm:w-4 max-sm:h-4 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center text-red-500 shadow-sm">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sm:w-4 sm:h-4 max-sm:w-3 max-sm:h-3">
             <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
           </svg>
         </div>
-      </div>
+      </div> -->
 
       <!-- 移动设备长按提示 - 仅在小屏幕上显示 -->
       <div class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 pointer-events-none transition-opacity duration-300 sm:hidden" :class="{ 'opacity-100': isLongPressed }">
@@ -90,7 +90,6 @@ import { useGalleryStore } from "../stores/galleryStore";
 import { useAppStore } from "../stores/appStore";
 import { useFavoriteStore } from "../stores/favoriteStore";
 import { useToastStore } from "../stores/toastStore";
-import { checkFavoriteStatus as apiFetchFavoriteStatus } from "../api/favorites";
 import { preloadImages } from '../utils/performance';
 
 const props = defineProps({
@@ -123,7 +122,7 @@ const selected = computed(() => {
   if (props.isSelected !== null) {
     return props.isSelected;
   }
-  
+
   // 根据当前页面选择正确的store来检查选中状态
   if (isInFavoritesPage.value) {
     // 在收藏页面使用favoriteStore的选中状态
@@ -140,40 +139,6 @@ const favoriteStatusCache = ref(new Map());
 const imageLoaded = ref(false);
 const videoRef = ref(null);
 const videoDuration = ref(null);
-
-// 检查图片是否已收藏 (适用于所有页面)
-const checkFavoriteStatus = () => {
-  // 首先检查store中是否有记录
-  if (favoriteStore.isFavorite(props.image.id)) {
-    return true;
-  }
-
-  // 如果缓存中有记录，返回缓存结果
-  if (favoriteStatusCache.value.has(props.image.id)) {
-    return favoriteStatusCache.value.get(props.image.id);
-  }
-
-  // 否则异步获取状态并缓存
-  fetchFavoriteStatus();
-  return false;
-};
-
-// 异步获取收藏状态
-const fetchFavoriteStatus = async () => {
-  try {
-    const response = await apiFetchFavoriteStatus(props.image.id);
-    if (response.code === 200) {
-      favoriteStatusCache.value.set(props.image.id, response.data.isFavorite);
-    }
-  } catch (error) {
-    console.error("获取收藏状态失败:", error);
-  }
-};
-
-// 组件挂载时获取收藏状态
-onMounted(() => {
-  fetchFavoriteStatus();
-});
 
 // 移动端长按和点击相关
 const touchTimeout = ref(null);

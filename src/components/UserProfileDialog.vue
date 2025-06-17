@@ -134,17 +134,11 @@
     <div class="relative w-full max-w-sm rounded-lg bg-card p-4 shadow-lg">
       <h3 class="text-lg font-medium mb-4">选择头像</h3>
       <div class="grid grid-cols-2 gap-4">
-        <button 
-          @click="$refs.avatarInput.click(); showAvatarOptions = false"
-          class="flex flex-col items-center justify-center rounded-md border p-4 hover:bg-muted transition-colors"
-        >
+        <button @click="$refs.avatarInput.click(); showAvatarOptions = false" class="flex flex-col items-center justify-center rounded-md border p-4 hover:bg-muted transition-colors">
           <ArrowUpTrayIcon class="h-8 w-8 mb-2 text-primary" />
           <span class="text-sm">从本地上传</span>
         </button>
-        <button 
-          @click="showGalleryPicker = true; showAvatarOptions = false"
-          class="flex flex-col items-center justify-center rounded-md border p-4 hover:bg-muted transition-colors"
-        >
+        <button @click="showGalleryPicker = true; showAvatarOptions = false" class="flex flex-col items-center justify-center rounded-md border p-4 hover:bg-muted transition-colors">
           <PhotoIcon class="h-8 w-8 mb-2 text-primary" />
           <span class="text-sm">从相册选择</span>
         </button>
@@ -162,28 +156,23 @@
           <XMarkIcon class="h-5 w-5" />
         </button>
       </div>
-      
+
       <div v-if="isLoading" class="flex-1 flex items-center justify-center">
         <div class="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
       </div>
-      
+
       <div v-else-if="filteredGalleryImages.length === 0" class="flex-1 flex items-center justify-center text-muted-foreground">
         相册中没有可用的图片
       </div>
-      
+
       <div v-else class="flex-1 overflow-y-auto p-2">
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          <div 
-            v-for="image in filteredGalleryImages" 
-            :key="image.id" 
-            class="aspect-square rounded-md overflow-hidden cursor-pointer border border-muted hover:ring-2 hover:ring-primary relative"
-            @click="previewImage(image)"
-          >
+          <div v-for="image in filteredGalleryImages" :key="image.id" class="aspect-square rounded-md overflow-hidden cursor-pointer border border-muted hover:ring-2 hover:ring-primary relative" @click="previewImage(image)">
             <img :src="image.thumbUrl || image.url" :alt="image.name" class="h-full w-full object-cover" />
           </div>
         </div>
       </div>
-      
+
       <div class="mt-4 flex justify-end">
         <button @click="showGalleryPicker = false" class="rounded-md bg-muted px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/80">
           取消
@@ -197,34 +186,21 @@
     <div class="absolute inset-0 bg-black/70" @click="showImagePreview = false"></div>
     <div class="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
       <!-- 关闭按钮 -->
-      <button 
-        @click="showImagePreview = false" 
-        class="absolute top-2 right-2 z-10 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
-      >
+      <button @click="showImagePreview = false" class="absolute top-2 right-2 z-10 rounded-full bg-black/50 p-1 text-white hover:bg-black/70">
         <XMarkIcon class="h-6 w-6" />
       </button>
-      
+
       <!-- 图片 -->
       <div class="relative overflow-hidden rounded-lg">
-        <img 
-          :src="previewingImage?.url" 
-          :alt="previewingImage?.name" 
-          class="max-h-[80vh] max-w-full object-contain"
-        />
+        <img :src="previewingImage?.url" :alt="previewingImage?.name" class="max-h-[80vh] max-w-full object-contain" />
       </div>
-      
+
       <!-- 操作按钮 -->
       <div class="mt-4 flex space-x-3">
-        <button 
-          @click="selectImageAsAvatar(previewingImage); showImagePreview = false" 
-          class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
+        <button @click="selectImageAsAvatar(previewingImage); showImagePreview = false" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
           选择为头像
         </button>
-        <button 
-          @click="showImagePreview = false" 
-          class="rounded-md bg-muted px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/80"
-        >
+        <button @click="showImagePreview = false" class="rounded-md bg-muted px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/80">
           取消
         </button>
       </div>
@@ -414,12 +390,12 @@ const filteredGalleryImages = computed(() => {
   return galleryImages.value.filter(image => {
     // 检查是否为图片类型（通过文件名后缀或MIME类型）
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
-    const isImage = image.type?.startsWith('image/') || 
-                   imageExtensions.some(ext => 
-                     (image.name || '').toLowerCase().endsWith(ext) || 
-                     (image.url || '').toLowerCase().endsWith(ext)
-                   );
-    
+    const isImage = image.type?.startsWith('image/') ||
+      imageExtensions.some(ext =>
+        (image.name || '').toLowerCase().endsWith(ext) ||
+        (image.url || '').toLowerCase().endsWith(ext)
+      );
+
     return isImage;
   });
 });
@@ -457,7 +433,7 @@ const previewImage = (image) => {
 // 选择相册图片作为头像
 const selectImageAsAvatar = (image) => {
   if (!image) return;
-  
+
   // 直接使用图片URL作为头像预览
   avatarPreview.value = image.url;
   // 标记这是从相册选择的图片，不需要重新上传
@@ -519,7 +495,7 @@ const saveUserInfo = async () => {
       setTimeout(() => {
         isUploading.value = false;
       }, 300); // 短暂延迟，让用户看到100%
-    } 
+    }
     // 如果选择了相册的图片作为头像
     else if (selectedGalleryImageUrl.value) {
       avatarUrl = selectedGalleryImageUrl.value;

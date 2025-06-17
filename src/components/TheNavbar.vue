@@ -37,9 +37,6 @@
           }" @click="closeMobileMenu">
           <HeartIcon class="h-5 w-5" />
           收藏
-          <span v-if="favoriteCount > 0" class="ml-auto rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
-            {{ favoriteCount }}
-          </span>
         </router-link>
         <router-link to="/upload" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors" :class="{
             'text-primary': $route.name === 'upload',
@@ -116,8 +113,6 @@ import {
   SparklesIcon
 } from "@heroicons/vue/24/outline";
 import { computed, ref } from "vue";
-import { useGalleryStore } from "../stores/galleryStore";
-import { useRoute } from "vue-router";
 import { useToastStore } from "../stores/toastStore";
 import { useAuthStore } from "../stores/authStore";
 import UserProfileDialog from "./UserProfileDialog.vue";
@@ -130,13 +125,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["close-mobile-menu"]);
-
-const route = useRoute();
-const galleryStore = useGalleryStore();
 const toastStore = useToastStore();
 const authStore = useAuthStore();
-const favoriteCount = computed(() => galleryStore.favoriteCount);
-
 // 用户信息弹窗控制
 const showProfileDialog = ref(false);
 

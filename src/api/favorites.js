@@ -48,21 +48,6 @@ export const removeFromFavorites = async (imageId) => {
 }
 
 /**
- * 检查收藏状态
- * @param {string} imageId 图片ID
- * @returns {Promise<Object>} 收藏状态
- */
-export const checkFavoriteStatus = async (imageId) => {
-  try {
-    const response = await apiClient.get(`/api/favorite/status/${imageId}`)
-    return response.data
-  } catch (error) {
-    console.error('检查收藏状态失败:', error)
-    throw error
-  }
-}
-
-/**
  * 批量取消收藏
  * @param {Array<string>} imageIds 图片ID数组
  * @returns {Promise<Object>} 批量取消结果
