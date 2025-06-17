@@ -252,11 +252,7 @@ onMounted(() => {
   // 添加滚动事件监听
   window.addEventListener('scroll', handleScroll);
 
-  // 监听上传完成事件
-  window.addEventListener('image-uploaded', handleImageUploaded);
-  
-  // 监听收藏变更事件
-  window.addEventListener('favorite-changed', handleFavoriteChanged);
+
 
   // 进入页面时重置收藏页面的选中状态和当前页面状态
   favoriteStore.clearSelection();
@@ -270,24 +266,13 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', handleWindowResize);
   window.removeEventListener('scroll', handleScroll);
-  window.removeEventListener('image-uploaded', handleImageUploaded);
-  window.removeEventListener('favorite-changed', handleFavoriteChanged);
+
 
   // 离开页面时重置当前页面的选中状态
   galleryStore.clearSelection();
 });
 
-// 处理图片上传完成事件
-const handleImageUploaded = () => {
-  // 使用后台刷新方式避免影响用户体验
-  galleryStore.fetchImagesInBackground();
-};
 
-// 处理收藏变更事件
-const handleFavoriteChanged = () => {
-  // 使用后台刷新方式避免影响用户体验
-  galleryStore.fetchImagesInBackground();
-};
 
 // 打开重命名对话框
 const openRenameDialog = (image) => {
