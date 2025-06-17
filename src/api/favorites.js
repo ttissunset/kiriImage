@@ -7,9 +7,9 @@ import apiClient from './client'
  * @param {number} [params.limit=50] 每页数量
  * @returns {Promise<Object>} 收藏列表数据
  */
-export const getFavorites = async (params = {}) => {
+export const getFavorites = async (params = { page: 1, limit: 50 }) => {
   try {
-    const response = await apiClient.get('/api/favorite/list', { params })
+    const response = await apiClient.get('/favorites', { params })
     return response.data
   } catch (error) {
     console.error('获取收藏列表失败:', error)
@@ -24,7 +24,9 @@ export const getFavorites = async (params = {}) => {
  */
 export const addToFavorites = async (imageId) => {
   try {
-    const response = await apiClient.post(`/api/favorite/add/${imageId}`)
+    const response = await apiClient.post(`/favorites/${imageId}`)
+    // 触发收藏变更事件
+    document.dispatchEvent(new CustomEvent('favorite-changed'))
     return response.data
   } catch (error) {
     console.error('添加收藏失败:', error)
@@ -39,7 +41,9 @@ export const addToFavorites = async (imageId) => {
  */
 export const removeFromFavorites = async (imageId) => {
   try {
-    const response = await apiClient.delete(`/api/favorite/remove/${imageId}`)
+    const response = await apiClient.delete(`/favorites/${imageId}`)
+    // 触发收藏变更事件
+    document.dispatchEvent(new CustomEvent('favorite-changed'))
     return response.data
   } catch (error) {
     console.error('删除收藏失败:', error)
@@ -54,9 +58,9 @@ export const removeFromFavorites = async (imageId) => {
  */
 export const batchRemoveFromFavorites = async (imageIds) => {
   try {
-    const response = await apiClient.delete('/api/favorite/batch', {
-      data: { imageIds }
-    })
+    const response = await apiClient.post('/favorites/batchRemove', { imageIds })
+    // 触发收藏变更事件
+    document.dispatchEvent(new CustomEvent('favorite-changed'))
     return response.data
   } catch (error) {
     console.error('批量取消收藏失败:', error)
@@ -71,10 +75,12 @@ export const batchRemoveFromFavorites = async (imageIds) => {
  */
 export const batchAddToFavorites = async (imageIds) => {
   try {
-    const response = await apiClient.post('/api/favorite/batch', { imageIds })
+    const response = await apiClient.post('/favorites/batchAdd', { imageIds })
+    // 触发收藏变更事件
+    document.dispatchEvent(new CustomEvent('favorite-changed'))
     return response.data
   } catch (error) {
     console.error('批量添加收藏失败:', error)
     throw error
   }
-} 
+}

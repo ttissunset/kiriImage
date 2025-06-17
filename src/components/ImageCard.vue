@@ -48,13 +48,13 @@
       </div>
 
       <!-- 左下角收藏图标 -->
-      <!-- <div v-if="checkFavoriteStatus()" class="absolute bottom-2 left-2">
+      <div v-if="image.favorite" class="absolute bottom-2 left-2">
         <div class="w-6 h-6 sm:w-6 sm:h-6 max-sm:w-4 max-sm:h-4 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center text-red-500 shadow-sm">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sm:w-4 sm:h-4 max-sm:w-3 max-sm:h-3">
             <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
           </svg>
         </div>
-      </div> -->
+      </div>
 
       <!-- 移动设备长按提示 - 仅在小屏幕上显示 -->
       <div class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 pointer-events-none transition-opacity duration-300 sm:hidden" :class="{ 'opacity-100': isLongPressed }">
@@ -126,7 +126,7 @@ const selected = computed(() => {
   // 根据当前页面选择正确的store来检查选中状态
   if (isInFavoritesPage.value) {
     // 在收藏页面使用favoriteStore的选中状态
-    return favoriteStore.isSelected(props.image.imageId);
+    return favoriteStore.isSelected(props.image.id);
   } else {
     // 在相册页面使用galleryStore的选中状态
     return galleryStore.isSelected(props.image.id);
@@ -198,7 +198,7 @@ const handleTouchEnd = (e) => {
 const toggleSelect = () => {
   if (isInFavoritesPage.value) {
     // 在收藏页面切换favoriteStore的选中状态
-    favoriteStore.toggleSelect(props.image.imageId);
+    favoriteStore.toggleSelect(props.image.id);
   } else {
     // 在相册页面切换galleryStore的选中状态
     galleryStore.toggleSelect(props.image.id);

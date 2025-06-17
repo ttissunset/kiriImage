@@ -23,7 +23,7 @@ export const useFavoriteStore = defineStore('favorite', () => {
   })
   // 获取所有选中的收藏对象
   const selectedFavorites = computed(() => {
-    return favorites.value.filter(fav => selectedIds.value.has(fav.imageId))
+    return favorites.value.filter(fav => selectedIds.value.has(fav.id))
   })
 
   // 获取收藏列表
@@ -46,6 +46,9 @@ export const useFavoriteStore = defineStore('favorite', () => {
       if (response.code === 200) {
         favorites.value = response.data.items
         total.value = response.data.total
+        // 更新分页信息
+        currentPage.value = response.data.page || 1
+        limit.value = response.data.limit || 50
         // 更新是否有更多数据
         hasMore.value = favorites.value.length < total.value
       } else {
@@ -83,7 +86,7 @@ export const useFavoriteStore = defineStore('favorite', () => {
         total.value = response.data.total
 
         // 更新当前页码
-        currentPage.value = nextPage
+        currentPage.value = response.data.page || nextPage
 
         // 更新是否有更多数据
         hasMore.value = favorites.value.length < total.value
@@ -129,7 +132,7 @@ export const useFavoriteStore = defineStore('favorite', () => {
 
       if (response.code === 200) {
         // 从列表中移除
-        const index = favorites.value.findIndex(fav => fav.imageId === imageId)
+        const index = favorites.value.findIndex(fav => fav.id === imageId)
         if (index !== -1) {
           favorites.value.splice(index, 1)
           total.value--
@@ -170,7 +173,7 @@ export const useFavoriteStore = defineStore('favorite', () => {
         const successfulIds = response.data.succeeded.items.map(item => item.imageId)
 
         // 从列表中移除成功删除的收藏
-        favorites.value = favorites.value.filter(fav => !successfulIds.includes(fav.imageId))
+        favorites.value = favorites.value.filter(fav => !successfulIds.includes(fav.id))
         total.value -= response.data.succeeded.count
 
         // 清空选择
@@ -197,7 +200,7 @@ export const useFavoriteStore = defineStore('favorite', () => {
 
   // 判断图片是否已收藏
   const isFavorite = (imageId) => {
-    return favorites.value.some(fav => fav.imageId === imageId)
+    return favorites.value.some(fav => fav.id === imageId);
   }
 
   // 检查图片收藏状态（通过API）
@@ -225,7 +228,7 @@ export const useFavoriteStore = defineStore('favorite', () => {
 
   const selectAll = () => {
     favorites.value.forEach(fav => {
-      selectedIds.value.add(fav.imageId)
+      selectedIds.value.add(fav.id)
     })
   }
 

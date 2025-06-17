@@ -11,7 +11,7 @@ import { isVideoFile } from '../utils/chunkUpload'
  */
 export const getImages = async (params = {}) => {
   try {
-    const response = await apiClient.get('/api/image/list', { params })
+    const response = await apiClient.get('/images', { params })
     return response.data
   } catch (error) {
     console.error('获取图片列表失败:', error)
@@ -35,12 +35,18 @@ export const uploadImage = async (formData, options = {}) => {
       throw new Error('视频文件请使用视频上传功能')
     }
     
-    const response = await apiClient.post('/api/image/upload', formData, {
+    const response = await apiClient.post('/images/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       },
       onUploadProgress: options.onUploadProgress
     })
+    
+    // 触发图片上传完成事件
+    if (response.data.code === 200) {
+      document.dispatchEvent(new CustomEvent('image-uploaded'))
+    }
+    
     return response.data
   } catch (error) {
     console.error('上传图片失败:', error)
@@ -55,7 +61,13 @@ export const uploadImage = async (formData, options = {}) => {
  */
 export const deleteImage = async (imageId) => {
   try {
-    const response = await apiClient.delete(`/api/image/${imageId}`)
+    const response = await apiClient.delete(`/images/${imageId}`)
+    
+    // 触发图片变更事件
+    if (response.data.code === 200) {
+      document.dispatchEvent(new CustomEvent('image-uploaded'))
+    }
+    
     return response.data
   } catch (error) {
     console.error('删除图片失败:', error)
@@ -70,7 +82,13 @@ export const deleteImage = async (imageId) => {
  */
 export const batchDeleteImages = async (imageIds) => {
   try {
-    const response = await apiClient.post('/api/image/batch-delete', { imageIds })
+    const response = await apiClient.post('/images/batchDelete', { imageIds })
+    
+    // 触发图片变更事件
+    if (response.data.code === 200) {
+      document.dispatchEvent(new CustomEvent('image-uploaded'))
+    }
+    
     return response.data
   } catch (error) {
     console.error('批量删除图片失败:', error)
@@ -88,7 +106,7 @@ export const batchDeleteImages = async (imageIds) => {
  */
 export const updateImage = async (imageId, updateData) => {
   try {
-    const response = await apiClient.put(`/api/image/${imageId}`, updateData)
+    const response = await apiClient.put(`/images/${imageId}`, updateData)
     return response.data
   } catch (error) {
     console.error('更新图片信息失败:', error)
@@ -103,7 +121,7 @@ export const updateImage = async (imageId, updateData) => {
  */
 export const getImageDetails = async (imageId) => {
   try {
-    const response = await apiClient.get(`/api/image/detail/${imageId}`)
+    const response = await apiClient.get(`/images/${imageId}`)
     return response.data
   } catch (error) {
     console.error('获取图片详情失败:', error)
@@ -128,13 +146,19 @@ export const batchUploadImages = async (formData, params = {}, options = {}) => 
       throw new Error('批量上传不支持视频文件，请单独上传视频')
     }
     
-    const response = await apiClient.post('/api/image/batch-upload', formData, {
+    const response = await apiClient.post('/images/batchUpload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       },
       params,
       onUploadProgress: options.onUploadProgress
     })
+    
+    // 触发图片上传完成事件
+    if (response.data.code === 200) {
+      document.dispatchEvent(new CustomEvent('image-uploaded'))
+    }
+    
     return response.data
   } catch (error) {
     console.error('批量上传图片失败:', error)

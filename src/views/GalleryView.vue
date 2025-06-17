@@ -252,19 +252,42 @@ onMounted(() => {
   // 添加滚动事件监听
   window.addEventListener('scroll', handleScroll);
 
+  // 监听上传完成事件
+  window.addEventListener('image-uploaded', handleImageUploaded);
+  
+  // 监听收藏变更事件
+  window.addEventListener('favorite-changed', handleFavoriteChanged);
+
   // 进入页面时重置收藏页面的选中状态和当前页面状态
   favoriteStore.clearSelection();
   galleryStore.clearSelection();
+  
+  // 每次进入组件时刷新数据
+  galleryStore.fetchImages();
 });
 
 // 组件卸载时清除事件监听
 onUnmounted(() => {
   window.removeEventListener('resize', handleWindowResize);
   window.removeEventListener('scroll', handleScroll);
+  window.removeEventListener('image-uploaded', handleImageUploaded);
+  window.removeEventListener('favorite-changed', handleFavoriteChanged);
 
   // 离开页面时重置当前页面的选中状态
   galleryStore.clearSelection();
 });
+
+// 处理图片上传完成事件
+const handleImageUploaded = () => {
+  // 使用后台刷新方式避免影响用户体验
+  galleryStore.fetchImagesInBackground();
+};
+
+// 处理收藏变更事件
+const handleFavoriteChanged = () => {
+  // 使用后台刷新方式避免影响用户体验
+  galleryStore.fetchImagesInBackground();
+};
 
 // 打开重命名对话框
 const openRenameDialog = (image) => {
@@ -350,78 +373,29 @@ const handleDeleteMultiple = async () => {
 
 // 批量添加到收藏
 const batchAddToFavorites = async () => {
-  if (!galleryStore.hasSelected) return;
+  if (galleryStore.selectedCount === 0) {
+    toastStore.error("请先选择要收藏的图片");
+    return;
+  }
 
-  // 暂停滚动监听，防止操作过程中触发
-  isScrollListenerActive.value = false;
+  // 获取所有选中的图片ID
+  const imageIds = galleryStore.selectedImages.map(img => img.id);
 
   try {
-    // 获取所有选中图片的ID
-    const imageIds = galleryStore.selectedImages.map(image => image.id);
-
-    // 确保先获取最新收藏列表
-    await favoriteStore.fetchFavorites();
-
-    // 使用favoriteStore的isFavorite方法检查哪些图片已经被收藏
-    const newImageIds = imageIds.filter(id => !favoriteStore.isFavorite(id));
-
-    // 如果所有图片都已收藏，直接提示并返回
-    if (newImageIds.length === 0) {
-      toastStore.warning('所选图片均已收藏', {
-        title: '请勿重复收藏'
-      });
-      return;
+    const response = await apiBatchAddToFavorites(imageIds);
+    
+    if (response.code === 200) {
+      toastStore.success(`已添加 ${response.data.succeeded.count} 张图片到收藏`);
+      
+      // 清除选择状态
+      galleryStore.clearSelection();
+    } else {
+      toastStore.error(response.message || "添加收藏失败");
     }
-
-    // 如果有部分图片已收藏，显示信息
-    if (newImageIds.length < imageIds.length) {
-      toastStore.info(`已排除${imageIds.length - newImageIds.length}张已收藏图片`, {
-        title: '智能收藏'
-      });
-    }
-
-    // 调用API函数，只收藏未收藏的图片
-    const result = await apiBatchAddToFavorites(newImageIds);
-
-    // 显示成功消息
-    toastStore.success(`成功添加${result.data.succeeded.count}张图片到收藏`, {
-      title: '添加收藏成功'
-    });
-
-    // 如果有失败的项目，显示失败消息
-    if (result.data.failed && result.data.failed.count > 0) {
-      toastStore.warning(`${result.data.failed.count}张图片添加失败`, {
-        title: '部分图片添加失败'
-      });
-    }
-
-    // 清除选择
-    galleryStore.clearSelection();
-
-    // 刷新收藏列表
-    favoriteStore.fetchFavorites();
   } catch (error) {
-    console.error('批量添加收藏失败:', error);
-    toastStore.error(error.message || '请稍后重试', {
-      title: '添加收藏失败'
-    });
-  } finally {
-    // 恢复滚动监听
-    nextTick(() => {
-      isScrollListenerActive.value = true;
-    });
+    console.error("批量添加到收藏失败:", error);
+    toastStore.error("添加收藏失败: " + (error.message || "未知错误"));
   }
-};
-
-// 格式化更新时间
-const formatUpdateTime = (date) => {
-  return date.toLocaleString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 };
 
 // 移动端菜单控制

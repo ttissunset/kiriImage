@@ -127,7 +127,7 @@
       <div v-else>
         <div class="grid-gallery" :style="gridStyle">
           <div v-for="favorite in favoriteStore.favorites" :key="favorite.id" class="grid-item">
-            <ImageCard :image="favorite.image" :is-selected="favoriteStore.isSelected(favorite.imageId)" @click="toggleSelect(favorite.imageId)" />
+            <ImageCard :image="favorite" :is-selected="favoriteStore.isSelected(favorite.id)" @click="toggleSelect(favorite.id)" />
           </div>
         </div>
 
@@ -162,11 +162,13 @@ import Slider from "../components/ui/Slider.vue";
 import { useAppStore } from "../stores/appStore";
 import { useGalleryStore } from "../stores/galleryStore";
 import { throttle, debounce } from "../utils/performance";
+import { useToastStore } from "../stores/toastStore";
 
 const favoriteStore = useFavoriteStore();
 const router = useRouter();
 const appStore = useAppStore();
 const galleryStore = useGalleryStore();
+const toastStore = useToastStore();
 
 const showBatchRemoveDialog = ref(false);
 const gridSize = ref(5); // 默认每行显示5个图片
@@ -258,8 +260,8 @@ onBeforeUnmount(() => {
 });
 
 // 切换选择
-const toggleSelect = (imageId) => {
-  favoriteStore.toggleSelect(imageId);
+const toggleSelect = (id) => {
+  favoriteStore.toggleSelect(id);
 };
 
 // 打开批量取消收藏对话框
@@ -269,24 +271,15 @@ const openBatchRemoveDialog = () => {
 
 // 处理批量取消收藏
 const handleBatchRemove = async () => {
-  // 暂停滚动监听，防止操作过程中触发
-  isScrollListenerActive.value = false;
-
-  const result = await favoriteStore.batchRemoveFavorites();
-
-  // 无论成功与否，都关闭对话框
-  showBatchRemoveDialog.value = false;
-
-  // 如果取消收藏成功，刷新收藏列表
-  if (result) {
-    // 重新获取最新的收藏列表
-    await favoriteStore.fetchFavorites();
+  if (favoriteStore.selectedFavorites.length === 0) {
+    toastStore.error("请先选择要取消收藏的图片");
+    return;
   }
 
-  // 恢复滚动监听
-  nextTick(() => {
-    isScrollListenerActive.value = true;
-  });
+  const result = await favoriteStore.batchRemoveFavorites();
+  if (result) {
+    showBatchRemoveDialog.value = false;
+  }
 };
 
 // 格式化更新时间

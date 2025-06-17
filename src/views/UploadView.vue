@@ -496,17 +496,13 @@ const uploadFiles = async () => {
     ).length;
 
     if (successCount > 0) {
-      toastStore.success(
-        `成功上传 ${successCount} 个文件${errorCount > 0 ? `，${errorCount} 个文件失败` : ""}`
-      );
-
       // 上传成功后询问用户是否要查看图库
       if (!uploadCompleteDialogShown.value) {
         uploadCompleteDialogShown.value = true;
 
         setTimeout(() => {
           toastStore
-            .confirm("上传完成，是否查看图库？", {
+            .confirm(`成功上传 ${successCount} 个文件${errorCount > 0 ? `，${errorCount} 个文件失败` : ""}，是否查看图库？`, {
               title: "上传成功",
               confirmText: "前往图库",
               cancelText: "继续上传",
