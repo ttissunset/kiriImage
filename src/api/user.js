@@ -4,11 +4,12 @@ import apiClient from './client'
  * 用户登录
  * @param {string} username 用户名
  * @param {string} password 密码
+ * @param {string} verificationCode 验证码
  * @returns {Promise<Object>} 登录结果，包含token和用户信息
  */
-export const login = async (username, password) => {
+export const login = async (username, password, code) => {
   try {
-    const response = await apiClient.post('/api/user/login', { username, password })
+    const response = await apiClient.post('/api/user/login', { username, password, code })
     return response.data
   } catch (error) {
     console.error('登录失败:', error)
@@ -62,5 +63,20 @@ export const updateUserInfo = async (updateData) => {
   } catch (error) {
     console.error('更新用户信息失败:', error)
     throw error
+  }
+}
+
+/**
+ * 发送邮箱验证码
+ * @param {string} username 用户名
+ * @returns {Promise<Object>} 发送结果
+ */
+export const sendVerificationCode = async (username) => {
+  try {
+    const response = await apiClient.post('/api/user/send-verification-code', { username });
+    return response.data;
+  } catch (error) {
+    console.error('发送验证码失败:', error);
+    throw error;
   }
 } 

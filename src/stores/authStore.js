@@ -28,12 +28,12 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // 登录方法
-  const login = async (username, password) => {
+  const login = async (username, password, verificationCode) => {
     loading.value = true
     error.value = null
 
     try {
-      const response = await apiLogin(username, password)
+      const response = await apiLogin(username, password, verificationCode)
 
       if (response.code === 200) {
         token.value = response.data.token
@@ -41,6 +41,9 @@ export const useAuthStore = defineStore('auth', () => {
 
         // 保存token到本地存储
         localStorage.setItem('token', token.value)
+
+        // 登录成功后清除验证码倒计时结束时间
+        localStorage.removeItem('verificationCodeEndTime');
 
         // 获取管理员状态
         await fetchAdminStatus()

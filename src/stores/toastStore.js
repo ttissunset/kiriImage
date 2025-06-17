@@ -86,6 +86,7 @@ export const useToastStore = defineStore('toast', () => {
         type: options.type || 'info',
         isModal: true,
         showCancel: false,
+        showConfirm: false, // 明确不显示确认按钮
         confirmText: options.confirmText || '确定',
         duration: 0, // 确认对话框不会自动消失
         onConfirm: () => resolve(true)
