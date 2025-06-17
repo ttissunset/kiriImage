@@ -1,6 +1,6 @@
 <template>
   <div class="flex h-screen w-full bg-background">
-    <!-- 左侧随机大图 - 仅桌面端显示 -->
+    <!-- 左侧随机大图  -->
     <div class="hidden md:block md:w-1/2 lg:w-2/3 relative overflow-hidden">
       <img :src="`https://img.loliapi.cn/i/pc/img${randomImageId}.webp`" class="h-full w-full object-cover" />
       <div class="absolute inset-0 bg-black/15 flex items-start justify-start">
@@ -68,11 +68,16 @@
                 ]">
                 输入密码
               </label>
-              <input id="password" v-model="password" type="password" required class="w-full rounded-md border px-3 pt-6 pb-2 transition-all focus:outline-none" :class="[
+              <input id="password" v-model="password" :type="showPassword ? 'text' : 'password'" required class="w-full rounded-md border px-3 pt-6 pb-2 pr-10 transition-all focus:outline-none" :class="[
                   isFocusedPassword
                     ? 'border-primary ring-1 ring-primary'
                     : 'border-input bg-background/95 md:bg-background',
                 ]" @focus="isFocusedPassword = true" @blur="isFocusedPassword = false" :disabled="authStore.loading" />
+              <!-- 显示/隐藏密码按钮 -->
+              <button type="button" @click="togglePassword" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" :disabled="authStore.loading">
+                <EyeIcon v-if="showPassword" class="h-5 w-5" />
+                <EyeSlashIcon v-else class="h-5 w-5" />
+              </button>
             </div>
           </div>
 
@@ -107,6 +112,7 @@
 <script setup>
 import { ref } from "vue";
 import { useAuthStore } from "../stores/authStore";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/vue/24/outline";
 
 const authStore = useAuthStore();
 const username = ref("");
@@ -118,10 +124,17 @@ const randomImageId2 = ref(Math.floor(Math.random() * 3068 + 1)); // 生成1-306
 const isFocusedUsername = ref(false);
 const isFocusedPassword = ref(false);
 
+// 添加密码显示/隐藏状态
+const showPassword = ref(false);
+
 const handleLogin = async () => {
   if (username.value && password.value) {
     await authStore.login(username.value, password.value);
   }
+};
+
+const togglePassword = () => {
+  showPassword.value = !showPassword.value;
 };
 </script>
 
