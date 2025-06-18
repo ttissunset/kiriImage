@@ -506,6 +506,7 @@ const uploadFiles = async () => {
               title: "上传成功",
               confirmText: "前往图库",
               cancelText: "继续上传",
+              showConfirm: true,
               duration: 5000, // 设置5秒后自动关闭
             })
             .then((confirmed) => {
