@@ -770,7 +770,7 @@ const batchUploadFiles = async (files) => {
           file.progress = 100;
         }
       });
-      
+
       // 确保所有文件的进度更新都已经应用
       setTimeout(() => {
         // 强制更新进度为100%

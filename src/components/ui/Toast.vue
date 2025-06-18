@@ -22,7 +22,7 @@
             <button v-if="toast.showCancel" @click="onCancel" class="px-3 py-1.5 rounded-md text-sm bg-muted text-muted-foreground hover:bg-muted/80">
               {{ toast.cancelText || '取消' }}
             </button>
-            <button v-if="toast.showConfirm !== false" @click="onConfirm" class="px-3 py-1.5 rounded-md text-sm bg-primary text-primary-foreground hover:bg-primary/90">
+            <button v-if="toast.showConfirm" @click="onConfirm" class="px-3 py-1.5 rounded-md text-sm bg-primary text-primary-foreground hover:bg-primary/90">
               {{ toast.confirmText || '确定' }}
             </button>
           </div>

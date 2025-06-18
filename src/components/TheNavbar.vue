@@ -144,6 +144,7 @@ const closeMobileMenu = () => {
 const logout = async () => {
   const confirmed = await toastStore.confirm("确定要退出登录吗？", {
     title: "退出确认",
+    showConfirm: true
   });
 
   if (confirmed) {

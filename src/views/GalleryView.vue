@@ -257,7 +257,7 @@ onMounted(() => {
   // 进入页面时重置收藏页面的选中状态和当前页面状态
   favoriteStore.clearSelection();
   galleryStore.clearSelection();
-  
+
   // 每次进入组件时刷新数据
   galleryStore.fetchImages();
 });
@@ -368,10 +368,10 @@ const batchAddToFavorites = async () => {
 
   try {
     const response = await apiBatchAddToFavorites(imageIds);
-    
+
     if (response.code === 200) {
-      toastStore.success(`已添加 ${response.data.succeeded.count} 张图片到收藏`);
-      
+      toastStore.success(`已添加 ${response.data.succeeded.length} 张图片到收藏`);
+
       // 清除选择状态
       galleryStore.clearSelection();
     } else {
